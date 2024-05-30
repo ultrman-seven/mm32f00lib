@@ -3,21 +3,19 @@
 #include "stdint.h"
 namespace sys
 {
-    namespace hClkDiv
+
+    enum class hClkDivEnum
     {
-        enum hClkDivEnum
-        {
-            divNone = 0,
-            div2 = 0x08,
-            div4,
-            div8,
-            div16,
-            div64,
-            div128,
-            div256,
-            div512
-        };
-    } // namespace hClkDiv
+        divNone = 0,
+        div2 = 0x08,
+        div4,
+        div8,
+        div16,
+        div64,
+        div128,
+        div256,
+        div512
+    };
 
     void deleteLoop(void (*f)(void));
     void runLoopFunctions(void);
