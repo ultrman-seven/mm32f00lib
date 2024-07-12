@@ -1,17 +1,9 @@
 #include "wyUart.hpp"
-using namespace UART;
-
-// #include "queue"
-// #include "list"
 #include "wyGpio.hpp"
 #include "wySys.hpp"
+#include "cppHalReg.hpp"
 
-// std::queue<uint8_t, std::list<uint8_t>> __uartFifo[2];
-
-const uint16_t __UART1_Rx_GPIO_AFs[] = {__GPIO_AF_Val(0, 0, 1), __GPIO_AF_Val(0, 3, 1), __GPIO_AF_Val(0, 13, 1), 0xffff};
-const uint16_t __UART1_Tx_GPIO_AFs[] = {__GPIO_AF_Val(0, 12, 1), __GPIO_AF_Val(0, 14, 1), 0xffff};
-const uint16_t __UART2_Rx_GPIO_AFs[] = {__GPIO_AF_Val(0, 13, 2), 0xffff};
-const uint16_t __UART2_Tx_GPIO_AFs[] = {__GPIO_AF_Val(0, 1, 2), 0xffff};
+using namespace UART;
 
 Serial::Serial(uint8_t n, const char *tx, const char *rx, uint32_t baud)
 {
@@ -19,27 +11,27 @@ Serial::Serial(uint8_t n, const char *tx, const char *rx, uint32_t baud)
     this->uart = (UART_TypeDef *)__UART_BASEs[n];
     __RCC_UART_ENR |= __UART_RCC_EN[n];
 
-    uint16_t const *rxAf = n ? __UART2_Rx_GPIO_AFs : __UART1_Rx_GPIO_AFs;
-    uint16_t const *txAf = n ? __UART2_Tx_GPIO_AFs : __UART1_Tx_GPIO_AFs;
+    uint16_t const *rxAf = __UART_Rx_GPIO_AFs[n];
+    uint16_t const *txAf = __UART_Tx_GPIO_AFs[n];
     uint8_t af = 0xff;
     uint32_t clk = sys::GetPCLK1Freq();
 
-    if (rx != nullptr)
+    if ((rx != nullptr) && (0 != *rx))
     {
         af = GPIO::afTable2afVal(rx, rxAf);
         if (af != 0xff)
         {
-            GPIO::afConfig(rx, af, GPIO::Mode_IN_FLOATING);
+            // GPIO::afConfig(rx, af, GPIO::Mode_IN_FLOATING);
+            GPIO::afConfig(rx, af, GPIO::Mode_IPU);
             this->uart->GCR |= 0x08;
         }
     }
-    if (tx != nullptr)
+    if ((tx != nullptr) && (0 != *tx))
     {
         af = GPIO::afTable2afVal(tx, txAf);
         if (af != 0xff)
         {
             GPIO::afConfig(tx, af, GPIO::Mode_AF_PP);
-            // GPIO::afConfig("a1", 2, GPIO::Mode_AF_PP);
             this->uart->GCR |= 0x10;
         }
     }
@@ -52,8 +44,6 @@ Serial::Serial(uint8_t n, const char *tx, const char *rx, uint32_t baud)
 
 Serial::~Serial()
 {
-    // std::queue<uint8_t, std::list<uint8_t>> empty;
-    // __uartFifo[num].swap(empty);
 }
 
 // bool Serial::readBuff(uint8_t &d)
@@ -89,43 +79,10 @@ Serial::~Serial()
 // {
 //     return this->uart->RDR & (uint8_t)0x00fF;
 // }
-#include "stdio.h"
-Serial &Serial::operator<<(uint8_t dat)
-{
-    sendByte(dat);
-    return *this;
-}
 
-Serial &Serial::operator<<(const char dat)
+void Serial::putChar(uint8_t c)
 {
-    sendByte(dat);
-    return *this;
-}
-Serial &Serial::operator<<(int32_t num)
-{
-    char str[10];
-    sprintf(str, "%d", num);
-    this->operator<<(str);
-    return *this;
-}
-Serial &Serial::operator<<(float num)
-{
-    char str[10];
-    sprintf(str, "%f", num);
-    this->operator<<(str);
-    return *this;
-}
-Serial &Serial::operator<<(const char *s)
-{
-    while (*s)
-        sendByte(*s++);
-    return *this;
-}
-Serial &Serial::operator<<(char *s)
-{
-    while (*s)
-        sendByte(*s++);
-    return *this;
+    this->sendByte(c);
 }
 
 void Serial::sendByte(uint8_t dat)
@@ -145,24 +102,61 @@ void Serial::sendByte(uint8_t *dat, uint8_t len)
     }
 }
 
-// Serial &Serial::operator>>(uint8_t &dat)
-// {
-//     dat = this->receiveByte();
-//     return *this;
-// }
+inline void Serial::nvicCfg()
+{
+    this->uart->IER |= 0x02;
+    NVIC_SetPriority(__UART_IRQ[this->num], 1);
+    NVIC_EnableIRQ(__UART_IRQ[this->num]);
+}
 
-// void (*__uartRxIRQ_Callbacks[2])(uint8_t) = {nullptr, nullptr};
+#define __UART_TotalNum 2
+void (*__uartRxIRQ_Callbacks[__UART_TotalNum])(uint8_t) = {nullptr, nullptr};
+void *__uartADT_ptr[__UART_TotalNum] = {nullptr, nullptr};
 
-#define __UARTx_IRQHandler(__UARTx)                                        \
-    if (UART##__UARTx->ISR & 0x02)                                         \
-    {                                                                      \
-        UART##__UARTx->ICR = 0x02;                                         \
-        if (__uartRxIRQ_Callbacks[__UARTx - 1] == nullptr)                 \
-            /* __uartFifo[__UARTx - 1].push(UART##__UARTx->RDR & 0x0f); */ \
-            __uartFifo[__UARTx - 1].emplace(UART##__UARTx->RDR & 0x0f);    \
-        else                                                               \
-            __uartRxIRQ_Callbacks[__UARTx - 1](UART##__UARTx->RDR & 0x0f); \
+template <uint32_t uartIdx, typename T>
+void __uartRxIRQ_Lib(uint8_t d)
+{
+    ((T *)(__uartADT_ptr[uartIdx]))->byteProcess(d);
+}
+
+using _cmd = __wyIstream::CMD_Listener;
+using _fifo = __wyIstream::FIFO;
+void (*__uartRxIRQ_CMD_Listener[__UART_TotalNum])(uint8_t) = {__uartRxIRQ_Lib<0, _cmd>, __uartRxIRQ_Lib<1, _cmd>};
+void (*__uartRxIRQ_FIFO[__UART_TotalNum])(uint8_t) = {__uartRxIRQ_Lib<0, _fifo>, __uartRxIRQ_Lib<1, _fifo>};
+
+void Serial::setInterrupt(uint8_t *buf, uint32_t bufSize, char const *start, char const *end)
+{
+    this->cmd.setBuf(buf, bufSize);
+    // this->setTrigger(start, end);
+    this->cmd.setKeyWord(start, end);
+    __uartADT_ptr[this->num] = &(this->cmd);
+    __uartRxIRQ_Callbacks[this->num] = __uartRxIRQ_CMD_Listener[this->num];
+    this->nvicCfg();
+}
+void Serial::setInterrupt(uint8_t *buf, uint32_t bufSize)
+{
+    this->nvicCfg();
+    __uartADT_ptr[this->num] = &(this->fifo);
+    __uartRxIRQ_Callbacks[this->num] = __uartRxIRQ_FIFO[this->num];
+}
+void Serial::setInterrupt(void (*f)(uint8_t))
+{
+    this->nvicCfg();
+    __uartRxIRQ_Callbacks[this->num] = f;
+}
+
+#define __UARTx_IRQHandler(__UARTx)                        \
+    uint32_t rd;                                           \
+    if (UART##__UARTx->ISR & 0x02)                         \
+    {                                                      \
+        UART##__UARTx->ICR = 0x02;                         \
+        rd = UART##__UARTx->RDR;                           \
+        if (__uartRxIRQ_Callbacks[__UARTx - 1] != nullptr) \
+            __uartRxIRQ_Callbacks[__UARTx - 1](rd & 0xff); \
     }
 
-// void UART1_IRQHandler(void) { __UARTx_IRQHandler(1); }
-// void UART2_IRQHandler(void) { __UARTx_IRQHandler(2); }
+extern "C"
+{
+    void UART1_IRQHandler(void) { __UARTx_IRQHandler(1); }
+    void UART2_IRQHandler(void) { __UARTx_IRQHandler(2); }
+}

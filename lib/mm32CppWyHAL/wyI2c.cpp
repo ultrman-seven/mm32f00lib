@@ -6,6 +6,9 @@ IIC_Object::IIC_Object(const char *sclPin, const char *sdaPin, GPIO::Mode mScl, 
     : scl(GpioPin(sclPin, mScl)), sda(GpioPin(sdaPin, mSda))
 {
 }
+IIC_HardwareObject::IIC_HardwareObject(/* args */)
+{
+}
 #include "reg_common.h"
 #include "core_cm0.h"
 static inline void __iicDelay(void)
@@ -133,6 +136,33 @@ uint8_t IIC_Object::send(uint8_t add, uint8_t reg, uint8_t len, uint8_t *txData)
     this->stop();
     return 0;
 }
+uint8_t IIC_Object::send16bitReg(uint8_t add, uint16_t reg, uint8_t len, uint8_t *txData)
+{
+    uint8_t *regPtr = (uint8_t *)&reg;
+    if (!this->start())
+        return 1;
+    this->sendByte(add << 1);
+    if (!this->waitAck())
+    {
+        this->stop();
+        return 1;
+    }
+    this->sendByte(regPtr[1]);
+    this->waitAck();
+    this->sendByte(regPtr[0]);
+    this->waitAck();
+    while (len--)
+    {
+        this->sendByte(*txData++);
+        if (!this->waitAck())
+        {
+            this->stop();
+            return 1;
+        }
+    }
+    this->stop();
+    return 0;
+}
 
 uint8_t IIC_Object::read(uint8_t add, uint8_t reg, uint8_t len, uint8_t *rxData)
 {
@@ -145,6 +175,34 @@ uint8_t IIC_Object::read(uint8_t add, uint8_t reg, uint8_t len, uint8_t *rxData)
         return 1;
     }
     this->sendByte(reg);
+    this->waitAck();
+
+    this->start();
+    this->sendByte((add << 1) + 1);
+    this->waitAck();
+    while (len--)
+    {
+        *rxData = this->readByte();
+        this->ack(len);
+    }
+    this->stop();
+    return 0;
+}
+
+uint8_t IIC_Object::read16bitReg(uint8_t add, uint16_t reg, uint8_t len, uint8_t *rxData)
+{
+    uint8_t *regPtr = (uint8_t *)&reg;
+    if (!this->start())
+        return 1;
+    this->sendByte(add << 1);
+    if (!this->waitAck())
+    {
+        this->stop();
+        return 1;
+    }
+    this->sendByte(regPtr[1]);
+    this->waitAck();
+    this->sendByte(regPtr[0]);
     this->waitAck();
 
     this->start();

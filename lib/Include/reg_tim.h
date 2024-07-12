@@ -30,16 +30,6 @@
 #pragma anon_unions
 #endif
 
-#include "reg_rcc.h"
-
-
-
-
-
-
-
-
-
 
 
 
@@ -50,16 +40,8 @@
 #define TIM3_BASE                       (0x40000000UL + 0x0400)              ///< Base Address: 0x40000400
 
 
-
 #define TIM14_BASE                      (0x40000000UL + 0x14000)              ///< Base Address: 0x40014000
 
-const uint32_t __TIM_IDXs[] = {
-    0, 6, 1, 6, 6,
-    6, 6, 6, 6, 6,
-    6, 6, 6, 2};
-const uint32_t __TIM_BASEs[] = {TIM1_BASE, TIM3_BASE, TIM14_BASE};
-const uint32_t __TIM_RCC_EN[] = {RCC_APB1ENR_TIM1, RCC_APB1ENR_TIM3,RCC_APB1ENR_TIM14};
-#define __RCC_TIM_ENR (*((uint32_t *)(RCC_BASE + 0x1C)))
 
 ////////////////////////////////////////////////////////////////////////////////
 /// @brief Timer Register Structure Definition

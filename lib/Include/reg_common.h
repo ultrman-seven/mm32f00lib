@@ -72,14 +72,7 @@
 #endif
 #endif
 
-
-
-
-
-
-
-
-
+extern u32 SystemCoreClock;
 
 #define __MPU_PRESENT               (0)                                     ///< Cortex-M0 does not provide a MPU present or not
 #ifndef __NVIC_PRIO_BITS

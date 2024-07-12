@@ -4,7 +4,7 @@
 namespace sys
 {
 
-    enum class hClkDivEnum
+    enum class hClkDiv
     {
         divNone = 0,
         div2 = 0x08,
@@ -27,6 +27,6 @@ namespace sys
     uint32_t GetSysClockFreq(void);
     uint32_t GetPCLK1Freq(void);
     uint32_t GetHCLKFreq(void);
-    void setHclkDiv(hClkDiv::hClkDivEnum d);
+    void setHclkDiv(hClkDiv d);
 }
 #endif /* __MM32_CPP_HAL_WY_LIB_SYS_HPP__ */

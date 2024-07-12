@@ -26,10 +26,11 @@ namespace TIM
     public:
         Timer(uint8_t timx, uint32_t period, uint32_t psc, uint8_t div, Mode m = Mode_Up);
         Timer(uint8_t timx, uint32_t usPeriod);
-        ~Timer();
+        // ~Timer();
 
         bool updated();
         pwmType setPwm(uint8_t ch, const char *p, const char *n = nullptr);
+        void interruptConfig(void (*callback)(void), uint8_t p = 1);
     };
 } // namespace TIM
 

@@ -88,11 +88,12 @@ namespace sys
     {
         __sysDelayCnt = 0;
     }
-    void setHclkDiv(hClkDiv::hClkDivEnum d)
+    void setHclkDiv(hClkDiv d)
     {
+        uint8_t div = (uint8_t)d;
         RCC->CFGR &= 0xffffff0f;
-        if (d)
-            RCC->CFGR |= (d << 4);
+        if (div)
+            RCC->CFGR |= (div << 4);
         SysTick_Config(GetHCLKFreq() / 1000);
         NVIC_SetPriority(SysTick_IRQn, 0);
     }

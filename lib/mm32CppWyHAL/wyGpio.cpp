@@ -2,6 +2,7 @@
 #include "reg_exti.h"
 #include "reg_common.h"
 #include "core_cm0.h"
+#include "cppHalReg.hpp"
 
 using namespace GPIO;
 
@@ -23,14 +24,34 @@ static inline uint8_t __GPIO_PinName2PinData(const char *name, GPIO_TypeDef *&po
 
 GpioPin::GpioPin(const char *n, Mode m, Speed s)
 {
+    this->reInit(n, m, s);
+}
+
+void GpioPin::reInit(const char *n, Mode m, Speed s)
+{
     GPIO_TypeDef *pt;
     uint8_t pn;
+    if (n == nullptr || *n == 0)
+    {
+        this->port = nullptr;
+        return;
+    }
     __GPIO_PinName2PinData(n, pt, pn);
     this->port = pt;
     this->pinNum = pn;
     this->pin = 0x01 << pn;
     modeConfig(pt, pn, m, s);
 }
+
+void GpioPin::copy(GpioPin &o)
+{
+    this->pin = o.pin;
+    this->pinNum = o.pinNum;
+    this->port = o.port;
+}
+
+bool GpioPin::available() { return this->port != nullptr; }
+
 void GpioPin::setMode(Mode m, Speed s)
 {
     modeConfig(this->port, this->pinNum, m, s);
@@ -56,7 +77,11 @@ void GpioPin::flip(void) { this->operator=(!((this->port->ODR) & (this->pin))); 
 bool GpioPin::read(void) { return this->port->IDR & this->pin; }
 // void GpioPin::operator=(bool s) { s ? (this->port->ODR |= this->pin) : (this->port->ODR &= (~this->pin)); }
 void GpioPin::operator=(bool s) { s ? this->set() : this->reset(); }
-void GpioPin::operator=(GPIO::GpioPin &o) { this->operator=(o.read()); }
+GpioPin &GpioPin::operator=(GPIO::GpioPin &o)
+{
+    this->operator=(o.read());
+    return *this;
+}
 bool GpioPin::operator!(void) { return !(this->port->IDR & this->pin); }
 
 void (*__GPIO_EXTI_Callbacks[16])(void) = {nullptr};
@@ -87,32 +112,35 @@ void (*__GPIO_EXTI_Callbacks[16])(void) = {nullptr};
                 __GPIO_EXTI_Callbacks[__EXTIx]();          \
         }
 
-void EXTI0_1_IRQHandler(void)
+extern "C"
 {
-    __EXTIx_IRQHandler(0);
-    __EXTIx_IRQHandler(1);
-}
+    void EXTI0_1_IRQHandler(void)
+    {
+        __EXTIx_IRQHandler(0);
+        __EXTIx_IRQHandler(1);
+    }
 
-void EXTI2_3_IRQHandler(void)
-{
-    __EXTIx_IRQHandler(2);
-    __EXTIx_IRQHandler(3);
-}
+    void EXTI2_3_IRQHandler(void)
+    {
+        __EXTIx_IRQHandler(2);
+        __EXTIx_IRQHandler(3);
+    }
 
-void EXTI4_15_IRQHandler(void)
-{
-    __EXTIx_IRQHandler(4);
-    __EXTIx_IRQHandler(5);
-    __EXTIx_IRQHandler(6);
-    __EXTIx_IRQHandler(7);
-    __EXTIx_IRQHandler(8);
-    __EXTIx_IRQHandler(9);
-    __EXTIx_IRQHandler(10);
-    __EXTIx_IRQHandler(11);
-    __EXTIx_IRQHandler(12);
-    __EXTIx_IRQHandler(13);
-    __EXTIx_IRQHandler(14);
-    __EXTIx_IRQHandler(15);
+    void EXTI4_15_IRQHandler(void)
+    {
+        __EXTIx_IRQHandler(4);
+        __EXTIx_IRQHandler(5);
+        __EXTIx_IRQHandler(6);
+        __EXTIx_IRQHandler(7);
+        __EXTIx_IRQHandler(8);
+        __EXTIx_IRQHandler(9);
+        __EXTIx_IRQHandler(10);
+        __EXTIx_IRQHandler(11);
+        __EXTIx_IRQHandler(12);
+        __EXTIx_IRQHandler(13);
+        __EXTIx_IRQHandler(14);
+        __EXTIx_IRQHandler(15);
+    }
 }
 
 namespace GPIO
@@ -227,7 +255,7 @@ namespace GPIO
         mask1 = 0x0f;
         mask2 = portIdx;
 
-        portIdx = (pn%4)<<2;
+        portIdx = (pn % 4) << 2;
         mask1 <<= portIdx;
         mask2 <<= portIdx;
 

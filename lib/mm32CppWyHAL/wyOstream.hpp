@@ -14,13 +14,13 @@ namespace __wyOstream
         void putStr(char *s);
         void putStr(const char *s);
         void putInt(int);
-        void putFloat(float val,int fmt);
+        void putFloat(float val, int fmt);
 
         WyOstream4MCU &operator<<(uint8_t dat);
         WyOstream4MCU &operator<<(const char dat);
         WyOstream4MCU &operator<<(int32_t num);
         WyOstream4MCU &operator<<(float num);
-        WyOstream4MCU &operator<<(const char *s);
+        WyOstream4MCU &operator<<(char const *s);
         WyOstream4MCU &operator<<(char *s);
     };
 }

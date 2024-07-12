@@ -81,10 +81,6 @@ typedef struct {
 ////////////////////////////////////////////////////////////////////////////////
 #define UART1                           ((UART_TypeDef*) UART1_BASE)
 #define UART2                           ((UART_TypeDef*) UART2_BASE)
-#include "reg_rcc.h"
-const uint32_t __UART_BASEs[] = {UART1_BASE, UART2_BASE};
-const uint32_t __UART_RCC_EN[] = {RCC_APB1ENR_UART1, RCC_APB1ENR_UART2};
-#define __RCC_UART_ENR (*((uint32_t *)(RCC_BASE + 0x1c)))
 
 ////////////////////////////////////////////////////////////////////////////////
 /// @brief UART_TDR Register Bit Definition

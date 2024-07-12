@@ -23,7 +23,19 @@ namespace IIC
         IIC_Object(const char *scl, const char *sda, GPIO::Mode mScl = GPIO::Mode_Out_PP, GPIO::Mode mSda = GPIO::Mode_Out_PP);
         uint8_t send(uint8_t add, uint8_t reg, uint8_t len, uint8_t *txData);
         uint8_t read(uint8_t add, uint8_t reg, uint8_t len, uint8_t *rxData);
+        uint8_t read16bitReg(uint8_t add, uint16_t reg, uint8_t len, uint8_t *rxData);
+        uint8_t send16bitReg(uint8_t add, uint16_t reg, uint8_t len, uint8_t *txData);
     };
+
+    class IIC_HardwareObject
+    {
+    private:
+        /* data */
+    public:
+        IIC_HardwareObject(/* args */);
+        // ~IIC_HardwareObject();
+    };
+
 }
 
 #endif /* __MM32_CPP_HAL_WY_LIB_IIC_HPP__ */

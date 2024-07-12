@@ -7,7 +7,7 @@
 
 Stack_Size      EQU     0x00000200
 ; Stack_Size      EQU     0x00000400
-; Stack_Size      EQU     0x00000600
+; Stack_Size      EQU     0x00000f00
 
                 AREA    STACK, NOINIT, READWRITE, ALIGN=3
 Stack_Mem       SPACE   Stack_Size
@@ -20,7 +20,7 @@ __initial_sp
 
 ; Heap_Size       EQU     0x00000000
 Heap_Size       EQU     0x00000100
-; Heap_Size       EQU     0x0000010
+; Heap_Size       EQU     0x00000f00
 
                 AREA    HEAP, NOINIT, READWRITE, ALIGN=3
 __heap_base
@@ -62,8 +62,8 @@ __Vectors       DCD     __initial_sp                   ; Top of Stack
                 DCD     FLASH_IRQHandler               ; FLASH Interrupt
                 DCD     RCC_IRQHandler                 ; RCC Interrupt
                 DCD     EXTI0_1_IRQHandler             ; EXTI Line 0 and 1 Interrupts
-                DCD     _Z18EXTI2_3_IRQHandlerv             ; EXTI Line 2 and 3 Interrupts
-                DCD     _Z19EXTI4_15_IRQHandlerv            ; EXTI Line 4 to 15 Interrupts
+                DCD     EXTI2_3_IRQHandler             ; EXTI Line 2 and 3 Interrupts
+                DCD     EXTI4_15_IRQHandler            ; EXTI Line 4 to 15 Interrupts
                 DCD     0                              ;
                 DCD     0                              ;
                 DCD     0                              ;
@@ -188,8 +188,8 @@ Default_Handler PROC
                 EXPORT  FLASH_IRQHandler               [WEAK]
                 EXPORT  RCC_IRQHandler                 [WEAK]
                 EXPORT  EXTI0_1_IRQHandler             [WEAK]
-                EXPORT  _Z18EXTI2_3_IRQHandlerv             [WEAK]
-                EXPORT  _Z19EXTI4_15_IRQHandlerv            [WEAK]
+                EXPORT  EXTI2_3_IRQHandler             [WEAK]
+                EXPORT  EXTI4_15_IRQHandler            [WEAK]
                 EXPORT  ADC1_IRQHandler                [WEAK]
                 EXPORT  TIM1_BRK_UP_TRG_COM_IRQHandler [WEAK]
                 EXPORT  TIM1_CC_IRQHandler             [WEAK]
@@ -206,8 +206,8 @@ PVD_IRQHandler
 FLASH_IRQHandler
 RCC_IRQHandler
 EXTI0_1_IRQHandler
-_Z18EXTI2_3_IRQHandlerv
-_Z19EXTI4_15_IRQHandlerv
+EXTI2_3_IRQHandler
+EXTI4_15_IRQHandler
 ADC1_IRQHandler
 TIM1_BRK_UP_TRG_COM_IRQHandler
 TIM1_CC_IRQHandler

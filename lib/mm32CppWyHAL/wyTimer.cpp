@@ -2,8 +2,39 @@
 #include "wySys.hpp"
 #include "wyGpio.hpp"
 // #include "reg_rcc.h"
+#include "reg_common.h"
+#include "cppHalReg.hpp"
 
 using namespace TIM;
+
+void (*timerUpdateCallbacks[5])(void);
+
+#define __TIM_Update_IRQ_Fun(_xTim, _xFun)                    \
+    if ((TIM##_xTim->SR & 0x01) && (TIM##_xTim->DIER & 0x01)) \
+    {                                                         \
+        TIM##_xTim->SR &= 0xfffffffe;                         \
+        if (timerUpdateCallbacks[_xFun] != nullptr)           \
+            timerUpdateCallbacks[_xFun]();                    \
+    }
+
+extern "C"
+{
+    void TIM1_BRK_UP_TRG_COM_IRQHandler()
+    {
+        __TIM_Update_IRQ_Fun(1, 0);
+    }
+    void TIM3_IRQHandler() { __TIM_Update_IRQ_Fun(3, 1); }
+    void TIM14_IRQHandler() { __TIM_Update_IRQ_Fun(14, 2); }
+}
+
+void Timer::interruptConfig(void (*callback)(void), uint8_t p)
+{
+    timerUpdateCallbacks[this->numIdx] = callback;
+
+    this->tim->DIER |= 0x01;
+    NVIC_SetPriority(__TIM_IRQ[this->numIdx], p);
+    NVIC_EnableIRQ(__TIM_IRQ[this->numIdx]);
+}
 
 Timer::Timer(uint8_t timx, uint32_t period, uint32_t psc, uint8_t div, Mode m)
 {
@@ -50,9 +81,9 @@ Timer::Timer(uint8_t timx, uint32_t usPeriod)
     tim->CR1 |= 0x01;
 }
 
-Timer::~Timer()
-{
-}
+// Timer::~Timer()
+// {
+// }
 
 bool Timer::updated()
 {

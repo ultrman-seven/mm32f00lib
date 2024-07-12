@@ -32,15 +32,6 @@
 
 
 
-
-
-
-
-
-#include "reg_rcc.h"
-
-
-
 ////////////////////////////////////////////////////////////////////////////////
 /// @brief GPIO Base Address Definition
 ////////////////////////////////////////////////////////////////////////////////
@@ -72,9 +63,6 @@ typedef struct {
 ////////////////////////////////////////////////////////////////////////////////
 #define GPIOA                           ((GPIO_TypeDef*) GPIOA_BASE)
 #define GPIOB                           ((GPIO_TypeDef*) GPIOB_BASE)
-const uint32_t __GPIO_PORT_BASEs[] = {GPIOA_BASE, GPIOB_BASE};
-const uint32_t __GPIO_PORT_RCC_EN[] = {RCC_AHBENR_GPIOA, RCC_AHBENR_GPIOB};
-#define __RCC_GPIO_ENR (*((uint32_t *)(RCC_BASE + 0x14)))
 
 ////////////////////////////////////////////////////////////////////////////////
 /// @brief GPIO Common Register Bit Definition

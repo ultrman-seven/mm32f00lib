@@ -67,15 +67,11 @@ void WyOstream4MCU::putFloat(float val, int fmt)
 }
 WyOstream4MCU &WyOstream4MCU::operator<<(int32_t num)
 {
-    // sprintf(this->str, "%d", num);
-    // this->operator<<(this->str);
     putInt(num);
     return *this;
 }
 WyOstream4MCU &WyOstream4MCU::operator<<(float num)
 {
-    // sprintf(this->str, "%f", num);
-    // this->operator<<(this->str);
     putFloat(num, 2);
     return *this;
 }
@@ -89,7 +85,7 @@ WyOstream4MCU &WyOstream4MCU::operator<<(const char c)
     this->putChar(c);
     return *this;
 }
-WyOstream4MCU &WyOstream4MCU::operator<<(const char *s)
+WyOstream4MCU &WyOstream4MCU::operator<<(char const *s)
 {
     while (*s)
         this->putChar(*s++);

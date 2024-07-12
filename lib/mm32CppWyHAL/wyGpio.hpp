@@ -42,7 +42,10 @@ namespace GPIO
 
     public:
         GpioPin(const char *, Mode = Mode::Mode_Out_PP, Speed = Speed_50MHz);
-        // ~GpioPin();
+        GpioPin()=default;
+        void copy(GpioPin &o);
+        void reInit(const char *, Mode = Mode::Mode_Out_PP, Speed = Speed_50MHz);
+        bool available();
 
         void set(void);
         void reset(void);
@@ -53,7 +56,7 @@ namespace GPIO
 
         bool read(void);
         void operator=(bool s);
-        void operator=(GpioPin &o);
+        GpioPin & operator=(GpioPin &o);
         bool operator!(void);
         GpioPin &operator<<(bool);
         GpioPin &operator>>(bool &);
