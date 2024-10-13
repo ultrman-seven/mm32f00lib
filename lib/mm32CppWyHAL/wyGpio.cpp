@@ -31,12 +31,13 @@ void GpioPin::reInit(const char *n, Mode m, Speed s)
 {
     GPIO_TypeDef *pt;
     uint8_t pn;
+    this->currentMode = m;
     if (n == nullptr || *n == 0)
     {
         this->port = nullptr;
         return;
     }
-    __GPIO_PinName2PinData(n, pt, pn);
+    this->portNum = __GPIO_PinName2PinData(n, pt, pn);
     this->port = pt;
     this->pinNum = pn;
     this->pin = 0x01 << pn;
@@ -103,6 +104,8 @@ void (*__GPIO_EXTI_Callbacks[16])(void) = {nullptr};
 #define __EXTI_LINE14 (0x4000)
 #define __EXTI_LINE15 (0x8000)
 
+static uint16_t _GPIO_ExtiFlag;
+
 #define __EXTIx_IRQHandler(__EXTIx)                        \
     if (EXTI->PR & __EXTI_LINE##__EXTIx)                   \
         if (EXTI->IMR & __EXTI_LINE##__EXTIx)              \
@@ -110,7 +113,68 @@ void (*__GPIO_EXTI_Callbacks[16])(void) = {nullptr};
             EXTI->PR = __EXTI_LINE##__EXTIx;               \
             if (__GPIO_EXTI_Callbacks[__EXTIx] != nullptr) \
                 __GPIO_EXTI_Callbacks[__EXTIx]();          \
+            else                                           \
+                _GPIO_ExtiFlag |= (0x01 << __EXTIx);       \
         }
+
+// template <uint8_t _PIN>
+// void __GPIO_SetFlag(void)
+// {
+//     uint16_t mask = 0x01;
+//     mask <<= _PIN;
+//     _GPIO_ExtiFlag |= mask;
+// }
+
+// void (*const __GPIO_EXTI_FLG_FUNs[16])(void) = {
+//     __GPIO_SetFlag<0>, __GPIO_SetFlag<1>, __GPIO_SetFlag<2>, __GPIO_SetFlag<3>,
+//     __GPIO_SetFlag<4>, __GPIO_SetFlag<5>, __GPIO_SetFlag<6>, __GPIO_SetFlag<7>,
+//     __GPIO_SetFlag<8>, __GPIO_SetFlag<9>, __GPIO_SetFlag<10>, __GPIO_SetFlag<11>,
+//     __GPIO_SetFlag<12>, __GPIO_SetFlag<13>, __GPIO_SetFlag<14>, __GPIO_SetFlag<15>};
+
+void GpioPin::setExti()
+{
+    // __GPIO_EXTI_Callbacks[this->pinNum] = __GPIO_EXTI_FLG_FUNs[this->pinNum];
+    __GPIO_EXTI_Callbacks[this->pinNum] = nullptr;
+
+    uint8_t pn = this->pinNum;
+    uint8_t tmp, portIdx;
+    uint32_t mask1, mask2;
+
+    __EXTI_RCC_EN();
+    portIdx = this->portNum;
+    tmp = pn;
+    tmp >>= 2;
+    mask1 = 0x0f;
+    mask2 = portIdx;
+
+    portIdx = (pn % 4) << 2;
+    mask1 <<= portIdx;
+    mask2 <<= portIdx;
+
+    EXTI->CR[tmp] &= ~mask1;
+    EXTI->CR[tmp] |= mask2;
+
+    EXTI->IMR |= this->pin;
+    if (this->currentMode != Mode_IPD)
+        EXTI->FTSR |= this->pin;
+    if (this->currentMode != Mode_IPU)
+        EXTI->RTSR |= this->pin;
+
+    // nvic
+    IRQn_Type extiN;
+    if (pn <= 1)
+        extiN = EXTI0_1_IRQn;
+    else if (pn <= 3)
+        extiN = EXTI2_3_IRQn;
+    else
+        extiN = EXTI4_15_IRQn;
+
+    NVIC_SetPriority(extiN, 1);
+    NVIC_EnableIRQ(extiN);
+}
+
+bool GpioPin::isTriggered() { return this->pin & _GPIO_ExtiFlag; }
+void GpioPin::triggerFlagReset() { _GPIO_ExtiFlag &= (~(this->pin)); }
 
 extern "C"
 {

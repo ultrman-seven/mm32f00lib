@@ -1,6 +1,7 @@
 #include "wyAdc.hpp"
 #include "wyGpio.hpp"
-#include "reg_rcc.h"
+// #include "reg_rcc.h"
+#include "cppHalReg.hpp"
 
 const uint16_t __ADC_PinChs[] = {
     __GPIO_AF_Val(0, 7, 7), __GPIO_AF_Val(0, 15, 6), __GPIO_AF_Val(0, 2, 5),
@@ -13,8 +14,8 @@ namespace ADC
     {
         uint16_t val = 0;
         uint8_t ch;
-
-        RCC->APB1ENR |= RCC_APB1ENR_ADC1;
+#ifdef __MM32F00_
+        __ADC_RCC_EN();
 
         if (*pin == 'v' || *pin == 'V')
         {
@@ -56,6 +57,7 @@ namespace ADC
         }
 
         RCC->APB1ENR &= ~RCC_APB1ENR_ADC1;
+#endif
         return val;
     }
 } // namespace ADC

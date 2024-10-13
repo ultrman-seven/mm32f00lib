@@ -31,6 +31,7 @@ namespace UART
         void setInterrupt(uint8_t *buf, uint32_t bufSize, char const *start, char const *end);
         void setInterrupt(uint8_t *buf, uint32_t bufSize);
         void setInterrupt(void (*callback)(uint8_t));
+        void interruptCMD(bool);
 
         // void setDMA(uint8_t *add, uint8_t len);
 

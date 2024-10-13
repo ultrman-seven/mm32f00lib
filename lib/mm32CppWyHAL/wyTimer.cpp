@@ -27,6 +27,27 @@ extern "C"
     void TIM14_IRQHandler() { __TIM_Update_IRQ_Fun(14, 2); }
 }
 
+void Timer::work(bool s)
+{
+    if (s)
+        tim->CR1 |= 0x01;
+    else
+        tim->CR1 &= (~0x01);
+}
+
+void Timer::interruptCMD(bool s)
+{
+    if (s)
+    {
+        this->tim->DIER |= 0x01;
+        NVIC_EnableIRQ(__TIM_IRQ[this->numIdx]);
+    }
+    else
+    {
+        this->tim->DIER &= 0xfffffffe;
+        NVIC_DisableIRQ(__TIM_IRQ[this->numIdx]);
+    }
+}
 void Timer::interruptConfig(void (*callback)(void), uint8_t p)
 {
     timerUpdateCallbacks[this->numIdx] = callback;

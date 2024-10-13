@@ -4,6 +4,7 @@
 #include "core_cm0.h"
 #include "reg_rcc.h"
 #include "wySys.hpp"
+#include "cppHalReg.hpp"
 
 std::list<void (*)(void)> __mainLoopFuncs;
 uint32_t __sysMsTimeStamp;
@@ -24,12 +25,16 @@ bool __funcListRmvIf(void (*a)(void))
 
 #include "mm32_device.h"
 const uint8_t tbPresc[] = {0, 0, 0, 0, 1, 2, 3, 4, 1, 2, 3, 4, 6, 7, 8, 9};
+uint32_t __sysIrqMask;
 
 namespace sys
 {
+    inline void irqDisable()
+    {
+    }
     uint32_t GetSysClockFreq(void)
     {
-        uint32_t result;
+#if defined __MM32F00_
         switch (RCC->CFGR & RCC_CFGR_SWS)
         {
         case RCC_CFGR_SWS_LSI:
@@ -45,6 +50,32 @@ namespace sys
             return HSI_48MHz_DIV6;
         }
         return HSI_48MHz_DIV6;
+#elif defined __MM32F02_
+        uint32_t result;
+        uint32_t clock, mul, div;
+        switch (RCC->CFGR & RCC_CFGR_SWS)
+        {
+
+        case RCC_CFGR_SWS_HSE:
+            result = HSE_VALUE;
+            break;
+
+        case RCC_CFGR_SWS_PLL:
+            clock = READ_BIT(RCC->PLLCFGR, RCC_PLLCFGR_PLLSRC) ? (READ_BIT(RCC->PLLCFGR, RCC_PLLCFGR_PLLXTPRE) ? (HSE_VALUE >> 1) : HSE_VALUE)
+                                                               : HSI_VALUE_PLL_ON;
+            mul = ((RCC->PLLCFGR & (u32)RCC_PLLCFGR_PLL_DN) >> RCC_PLLCFGR_PLL_DN_Pos) + 1;
+            div = ((RCC->PLLCFGR & RCC_PLLCFGR_PLL_DP) >> RCC_PLLCFGR_PLL_DP_Pos) + 1;
+
+            result = clock * mul / div;
+            break;
+        default:
+            result = HSI_DIV6;
+            break;
+        }
+        return result;
+#else
+        return 0;
+#endif
     }
     uint32_t GetHCLKFreq(void)
     {
@@ -54,10 +85,15 @@ namespace sys
     {
         return (GetHCLKFreq() >> tbPresc[(RCC->CFGR & RCC_CFGR_PPRE1) >> RCC_CFGR_PPRE1_Pos]);
     }
-    uint32_t getTimeStamp(void)
+    uint32_t getTimeStamp(void) { return __sysMsTimeStamp; }
+    void resetTimeStamp(void)
     {
-        return __sysMsTimeStamp;
+        NVIC_DisableIRQ(SysTick_IRQn);
+        __sysMsTimeStamp = 0;
+        NVIC_SetPriority(SysTick_IRQn, 0);
+        NVIC_EnableIRQ(SysTick_IRQn);
     }
+
     uint32_t getTimeStamp(unsigned long *t)
     {
         *t = __sysMsTimeStamp;

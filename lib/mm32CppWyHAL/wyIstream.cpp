@@ -6,6 +6,7 @@ using namespace __wyIstream;
 void WyIstream4MCU::setTrigger(char const *start, char const *stop) { cmd.setKeyWord(start, stop); }
 void WyIstream4MCU::addCMD(void (**f)(uint8_t *, uint32_t), uint32_t len) { cmd.addCmd(f, len); }
 void WyIstream4MCU::addCMD(void (*f)(uint8_t *, uint32_t)) { cmd.addCmd(f); }
+uint32_t WyIstream4MCU::getBufDataLen(void) { return fifo.getDataLen(); }
 
 void FIFO::setFifoBuf(uint8_t *buf, uint32_t len)
 {

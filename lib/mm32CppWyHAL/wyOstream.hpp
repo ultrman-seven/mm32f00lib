@@ -15,6 +15,10 @@ namespace __wyOstream
         void putStr(const char *s);
         void putInt(int);
         void putFloat(float val, int fmt);
+        void putHex(uint64_t val);
+        void putHex(uint8_t *dataBuf, uint32_t dataLen);
+        void putBin(uint64_t val, uint8_t bitLen = 8);
+        void putBin(uint8_t *dataBuf, uint32_t dataLen, uint32_t bitLen = 8);
 
         WyOstream4MCU &operator<<(uint8_t dat);
         WyOstream4MCU &operator<<(const char dat);

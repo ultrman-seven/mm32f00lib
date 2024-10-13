@@ -31,6 +31,10 @@ namespace TIM
         bool updated();
         pwmType setPwm(uint8_t ch, const char *p, const char *n = nullptr);
         void interruptConfig(void (*callback)(void), uint8_t p = 1);
+        void interruptCMD(bool s);
+        void work(bool s);
+        void clear(void) { tim->CNT = 0; }
+        uint32_t getCnt(void) { return tim->CNT; }
     };
 } // namespace TIM
 

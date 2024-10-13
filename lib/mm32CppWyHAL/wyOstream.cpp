@@ -18,6 +18,32 @@ void WyOstream4MCU::putStr(const char *s)
     while (*s)
         this->putChar(*s++);
 }
+void WyOstream4MCU::putBin(uint64_t val, uint8_t bitLen)
+{
+    uint64_t mask = 1;
+    mask <<= (bitLen - 1);
+    this->putStr("0b");
+    while (bitLen--)
+    {
+        this->putChar((val & mask) ? '1' : '0');
+        val <<= 1;
+    }
+}
+
+void WyOstream4MCU::putHex(uint64_t val)
+{
+    char str[20];
+    uint32_t foo;
+    foo = val >> 32;
+    sprintf(str, "%x", foo);
+    this->putStr("0x");
+    this->putStr(str);
+    this->putChar(' ');
+    foo = val & 0xffffffff;
+    sprintf(str, "%x", foo);
+    this->putStr(str);
+}
+
 void WyOstream4MCU::putInt(int val)
 {
 
@@ -40,7 +66,7 @@ void WyOstream4MCU::putInt(int val)
         stk.pop();
     }
 #else
-    char str[10];
+    char str[20];
     sprintf(str, "%d", val);
     this->putStr(str);
 #endif
@@ -60,7 +86,7 @@ void WyOstream4MCU::putFloat(float val, int fmt)
         intPart = -intPart;
     this->putInt(intPart);
 #else
-    char str[10];
+    char str[20];
     sprintf(str, "%f", val);
     this->putStr(str);
 #endif

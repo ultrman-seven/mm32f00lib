@@ -37,12 +37,18 @@ namespace GPIO
     {
     private:
         uint16_t pin;
-        uint16_t pinNum;
+        // uint16_t pinNum;
+        struct
+        {
+            uint16_t pinNum : 8;
+            uint16_t portNum : 8;
+        };
         GPIO_TypeDef *port;
+        Mode currentMode;
 
     public:
         GpioPin(const char *, Mode = Mode::Mode_Out_PP, Speed = Speed_50MHz);
-        GpioPin()=default;
+        GpioPin() = default;
         void copy(GpioPin &o);
         void reInit(const char *, Mode = Mode::Mode_Out_PP, Speed = Speed_50MHz);
         bool available();
@@ -55,11 +61,15 @@ namespace GPIO
         // void setSpeed(GpioSpeed s);
 
         bool read(void);
+        bool getOutputState(void) { return port->ODR & (this->pin); }
         void operator=(bool s);
-        GpioPin & operator=(GpioPin &o);
+        GpioPin &operator=(GpioPin &o);
         bool operator!(void);
         GpioPin &operator<<(bool);
         GpioPin &operator>>(bool &);
+        void setExti();
+        bool isTriggered();
+        void triggerFlagReset();
     };
 
 #define __GPIO_AF_Val(__port, __pin, __af) ((__port << 12) + (__pin << 8) + __af)

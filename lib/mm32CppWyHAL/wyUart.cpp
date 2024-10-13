@@ -124,6 +124,17 @@ using _fifo = __wyIstream::FIFO;
 void (*__uartRxIRQ_CMD_Listener[__UART_TotalNum])(uint8_t) = {__uartRxIRQ_Lib<0, _cmd>, __uartRxIRQ_Lib<1, _cmd>};
 void (*__uartRxIRQ_FIFO[__UART_TotalNum])(uint8_t) = {__uartRxIRQ_Lib<0, _fifo>, __uartRxIRQ_Lib<1, _fifo>};
 
+void Serial::interruptCMD(bool s)
+{
+    if (s)
+    {
+        this->uart->IER |= 0x0002;
+        NVIC_EnableIRQ(__UART_IRQ[this->num]);
+        return;
+    }
+    this->uart->IER &= ~0x0002;
+    NVIC_DisableIRQ(__UART_IRQ[this->num]);
+}
 void Serial::setInterrupt(uint8_t *buf, uint32_t bufSize, char const *start, char const *end)
 {
     this->cmd.setBuf(buf, bufSize);

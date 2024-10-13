@@ -1,4 +1,6 @@
 #include "wyI2c.hpp"
+#include "reg_common.h"
+#include "core_cm0.h"
 
 using namespace IIC;
 using namespace GPIO;
@@ -6,11 +8,10 @@ IIC_Object::IIC_Object(const char *sclPin, const char *sdaPin, GPIO::Mode mScl, 
     : scl(GpioPin(sclPin, mScl)), sda(GpioPin(sdaPin, mSda))
 {
 }
-IIC_HardwareObject::IIC_HardwareObject(/* args */)
+IIC_HardwareObject::IIC_HardwareObject(uint8_t num)
 {
 }
-#include "reg_common.h"
-#include "core_cm0.h"
+
 static inline void __iicDelay(void)
 {
     __IO uint32_t time = 3;
@@ -26,7 +27,8 @@ inline void IIC_Object::ack(uint8_t ys)
     __iicDelay();
     scl = 1;
     __iicDelay();
-    scl = 1;
+    scl = 0;
+    // sda = 1;
 }
 
 inline bool IIC_Object::waitAck(void)
@@ -184,6 +186,7 @@ uint8_t IIC_Object::read(uint8_t add, uint8_t reg, uint8_t len, uint8_t *rxData)
     {
         *rxData = this->readByte();
         this->ack(len);
+        ++rxData;
     }
     this->stop();
     return 0;
@@ -212,6 +215,7 @@ uint8_t IIC_Object::read16bitReg(uint8_t add, uint16_t reg, uint8_t len, uint8_t
     {
         *rxData = this->readByte();
         this->ack(len);
+        ++rxData;
     }
     this->stop();
     return 0;

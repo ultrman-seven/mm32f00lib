@@ -1,7 +1,7 @@
-#ifndef C2C88BE9_2A1F_4F6F_A47E_E55CBA48A531
-#define C2C88BE9_2A1F_4F6F_A47E_E55CBA48A531
+#ifndef D8F0D8F2_5157_4074_83FF_4622987C0803
+#define D8F0D8F2_5157_4074_83FF_4622987C0803
 
-#define __MM32F00_
+#define __MM32F02_
 
 // #include "stdint.h"
 #include "reg_rcc.h"
@@ -11,10 +11,10 @@
 ////
 extern const uint32_t __GPIO_PORT_BASEs[];
 extern const uint32_t __GPIO_PORT_RCC_EN[];
-#define __RCC_GPIO_ENR (*((uint32_t *)(RCC_BASE + 0x14)))
-#define __EXTI_RCC_EN() (*(uint32_t *)(RCC_BASE + 0x1c) |= RCC_APB1ENR_EXTI)
+#define __RCC_GPIO_ENR (RCC->AHBENR)
+#define __EXTI_RCC_EN() (RCC->APB2ENR |= RCC_APB2ENR_EXTI)
 
-#define __ADC_RCC_EN() (RCC->APB1ENR |= RCC_APB1ENR_ADC1)
+#define __ADC_RCC_EN() (RCC->APB2ENR |= RCC_APB2ENR_ADC1)
 
 /// uart
 extern const uint32_t __UART_BASEs[];
@@ -23,7 +23,6 @@ extern const uint32_t __UART_RCC_EN[];
 extern IRQn_Type const __UART_IRQ[];
 extern uint16_t const *const __UART_Rx_GPIO_AFs[];
 extern uint16_t const *const __UART_Tx_GPIO_AFs[];
-extern uint32_t const __UART_BUS_CFG;
 
 /// tim
 extern const uint32_t __TIM_IDXs[];
@@ -32,4 +31,4 @@ extern const uint32_t __TIM_RCC_EN[];
 extern IRQn_Type const __TIM_IRQ[];
 #define __RCC_TIM_ENR (*((uint32_t *)(RCC_BASE + 0x1C)))
 
-#endif /* C2C88BE9_2A1F_4F6F_A47E_E55CBA48A531 */
+#endif

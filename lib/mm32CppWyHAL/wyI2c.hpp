@@ -32,7 +32,7 @@ namespace IIC
     private:
         /* data */
     public:
-        IIC_HardwareObject(/* args */);
+        IIC_HardwareObject(uint8_t num);
         // ~IIC_HardwareObject();
     };
 
