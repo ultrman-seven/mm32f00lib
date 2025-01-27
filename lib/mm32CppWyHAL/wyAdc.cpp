@@ -6,7 +6,8 @@
 const uint16_t __ADC_PinChs[] = {
     __GPIO_AF_Val(0, 7, 7), __GPIO_AF_Val(0, 15, 6), __GPIO_AF_Val(0, 2, 5),
     __GPIO_AF_Val(0, 11, 4), __GPIO_AF_Val(0, 12, 3), __GPIO_AF_Val(0, 3, 2),
-    __GPIO_AF_Val(1, 0, 1), __GPIO_AF_Val(1, 1, 0), 0xffff};
+    __GPIO_AF_Val(1, 0, 1), __GPIO_AF_Val(1, 1, 0),
+     0xffff};
 
 namespace ADC
 {
@@ -37,6 +38,7 @@ namespace ADC
         ADC1->CFGR &= ~ADC_CFGR_SAMCTL;
         // ADC1->CFGR |= ADC_CFGR_SAMCTL_13_5;
         ADC1->CFGR |= ADC_CFGR_SAMCTL_41_5;
+        // ADC1->CFGR |= ADC_CFGR_SAMCTL_239_5;
 
         ADC1->ADCFG |= 0x01;
 

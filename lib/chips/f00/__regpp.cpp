@@ -3,16 +3,27 @@
 #include "cppHalReg.hpp"
 #include "wySys.hpp"
 
-const uint32_t __GPIO_PORT_BASEs[] = {GPIOA_BASE, GPIOB_BASE, GPIOC_BASE};
-const uint32_t __GPIO_PORT_RCC_EN[] = {RCC_AHBENR_GPIOA, RCC_AHBENR_GPIOB, RCC_AHBENR_GPIOC};
+const uint32_t __GPIO_PORT_BASEs[] = {GPIOA_BASE, GPIOB_BASE};
+const uint32_t __GPIO_PORT_RCC_EN[] = {RCC_AHBENR_GPIOA, RCC_AHBENR_GPIOB};
 
 const uint32_t __TIM_BASEs[] = {TIM1_BASE, TIM3_BASE, TIM14_BASE};
-const uint32_t __TIM_RCC_EN[] = {RCC_APB2ENR_TIM1, RCC_APB1ENR_TIM3, RCC_APB2ENR_TIM14};
+const uint32_t __TIM_RCC_EN[] = {RCC_APB1ENR_TIM1, RCC_APB1ENR_TIM3, RCC_APB1ENR_TIM14};
 
 const uint32_t __UART_BASEs[] = {UART1_BASE, UART2_BASE};
-const uint32_t __UART_RCC_EN[] = {RCC_APB2ENR_UART1, RCC_APB1ENR_UART2};
+const uint32_t __UART_RCC_EN[] = {RCC_APB1ENR_UART1, RCC_APB1ENR_UART2};
 
-const uint32_t __TIM_IDXs[] = {
+#define __RCC_APB1ENR_OFFSET 0x1c
+
+const uint16_t __UART_RCC_ENR_CFG_OFFSETs[] = {
+    ((__RCC_APB1ENR_OFFSET) << 8) + RCC_APB1ENR_UART1_Pos,
+    ((__RCC_APB1ENR_OFFSET) << 8) + RCC_APB1ENR_UART2_Pos};
+
+#define __UART1_BUS sys::_MCU_BUS_APB1
+#define __UART2_BUS sys::_MCU_BUS_APB1
+
+uint32_t const __UART_BUS_CFG = __UART1_BUS + (__UART2_BUS << 2);
+
+const uint8_t __TIM_IDXs[] = {
     0, 6, 1, 6, 6,
     6, 6, 6, 6, 6,
     6, 6, 6, 2};
@@ -21,13 +32,6 @@ const uint16_t __UART1_Rx_GPIO_AFs[] = {__GPIO_AF_Val(0, 0, 1), __GPIO_AF_Val(0,
 const uint16_t __UART1_Tx_GPIO_AFs[] = {__GPIO_AF_Val(0, 12, 1), __GPIO_AF_Val(0, 14, 1), 0xffff};
 const uint16_t __UART2_Rx_GPIO_AFs[] = {__GPIO_AF_Val(0, 13, 2), 0xffff};
 const uint16_t __UART2_Tx_GPIO_AFs[] = {__GPIO_AF_Val(0, 1, 2), 0xffff};
-
-#define __UART1_BUS sys::_MCU_BUS_APB1
-#define __UART2_BUS sys::_MCU_BUS_APB1
-#define __UART3_BUS sys::_MCU_BUS_APB1
-#define __UART4_BUS sys::_MCU_BUS_APB1
-
-uint32_t const __UART_BUS_CFG = __UART1_BUS + (__UART2_BUS << 2) + (__UART3_BUS << 4) + (__UART4_BUS << 6);
 
 uint16_t const *const __UART_Rx_GPIO_AFs[] = {__UART1_Rx_GPIO_AFs, __UART2_Rx_GPIO_AFs};
 uint16_t const *const __UART_Tx_GPIO_AFs[] = {__UART1_Tx_GPIO_AFs, __UART2_Tx_GPIO_AFs};

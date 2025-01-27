@@ -6,7 +6,7 @@
 ; </h>
 
 ; Stack_Size      EQU     0x00000200
-Stack_Size      EQU     0x00000400
+Stack_Size      EQU     0x00000300
 ; Stack_Size      EQU     0x00000490
 
                 AREA    STACK, NOINIT, READWRITE, ALIGN=3

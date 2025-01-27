@@ -1,7 +1,11 @@
 #include "wyOstream.hpp"
 
+#define __Ostream_Use_Private_STL
+
 #ifdef __Ostream_Use_STL
 #include "stack"
+// #elif defined __Ostream_Use_Private_STL
+
 #else
 #include "stdio.h"
 #endif
@@ -65,26 +69,55 @@ void WyOstream4MCU::putInt(int val)
         this->putChar(stk.top());
         stk.pop();
     }
+#elif defined __Ostream_Use_Private_STL
+    char stk[20];
+    uint8_t cnt = 0;
+
+    if (val < 0)
+    {
+        this->putChar('-');
+        val = -val;
+    }
+    while (val >= 10)
+    {
+        stk[cnt++] = (val % 10) + '0';
+        val /= 10;
+    }
+    this->putChar(val + '0');
+    while (cnt--)
+    {
+        this->putChar(stk[cnt]);
+    }
 #else
-    char str[20];
-    sprintf(str, "%d", val);
-    this->putStr(str);
+    // char str[20];
+    // sprintf(str, "%d", val);
+    // this->putStr(str);
 #endif
 }
 
 void WyOstream4MCU::putFloat(float val, int fmt)
 {
-#ifdef __Ostream_Use_STL
-    int intPart = val;
+#if (defined __Ostream_Use_STL) || (defined __Ostream_Use_Private_STL)
 
+    int intPart;
+    if (val < 0)
+    {
+        val = -val;
+        this->putChar('-');
+    }
+    intPart = val;
     this->putInt(intPart);
     val -= intPart;
+    this->putChar('.');
     while (fmt--)
+    {
         val *= 10;
+        if (val < 1)
+            this->putChar('0');
+    }
     intPart = val;
-    if (intPart < 0)
-        intPart = -intPart;
-    this->putInt(intPart);
+    if (intPart)
+        this->putInt(intPart);
 #else
     char str[20];
     sprintf(str, "%f", val);

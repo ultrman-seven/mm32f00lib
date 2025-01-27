@@ -9,26 +9,29 @@ namespace UART
     class Serial : public __wyOstream::WyOstream4MCU, public __wyIstream::WyIstream4MCU
     {
     private:
+        uint8_t irqMode;
         uint8_t num;
         UART_TypeDef *uart;
+        void (*IRQ_Callback)(uint8_t);
         inline void nvicCfg();
         // __wyIstream::FIFO fifo;
         // __wyIstream::CMD_Listener cmd;
 
     public:
         Serial(uint8_t n, const char *tx, const char *rx = nullptr, uint32_t baud = 115200);
-        ~Serial();
-        __wyIstream::CMD_Listener cmdListener;
+        // ~Serial();
+        // __wyIstream::CMD_Listener cmdListener;
         void sendByte(uint8_t dat);
         void sendByte(uint8_t *dat, uint8_t len);
-
+        void iqrHandler();
         // bool received(void);
         // uint8_t receiveByte(void);
 
         // // uint16_t getBuffLen(void);
         // // uint8_t readBuff(void);
 
-        void setInterrupt(uint8_t *buf, uint32_t bufSize, char const *start, char const *end);
+        void setInterrupt(uint8_t *buf, uint32_t bufSize, char const *start, char const *end, void (*f)(uint8_t *, uint32_t) = nullptr);
+        void setInterrupt(uint8_t *buf, uint32_t bufSize, char const *start, char const *end, uint8_t *argvBuf, uint32_t argvBufLen, uint32_t *argcPtr);
         void setInterrupt(uint8_t *buf, uint32_t bufSize);
         void setInterrupt(void (*callback)(uint8_t));
         void interruptCMD(bool);

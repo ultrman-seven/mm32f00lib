@@ -10,6 +10,19 @@ std::list<void (*)(void)> __mainLoopFuncs;
 uint32_t __sysMsTimeStamp;
 volatile uint32_t __sysDelayCnt;
 
+uint32_t __clkFreqSys;
+uint32_t __clkFreqAhb;
+uint32_t __clkFreqApb1;
+uint32_t __clkFreqApb2;
+
+static inline void __sys_clk_update(void)
+{
+    __clkFreqSys = sys::GetSysClockFreq();
+    __clkFreqAhb = sys::GetHCLKFreq();
+    __clkFreqApb1 = sys::GetPCLK1Freq();
+    __clkFreqApb2 = sys::GetPCLK2Freq();
+}
+
 void SysTick_Handler(void)
 {
     ++__sysMsTimeStamp;
@@ -26,6 +39,23 @@ bool __funcListRmvIf(void (*a)(void))
 #include "mm32_device.h"
 const uint8_t tbPresc[] = {0, 0, 0, 0, 1, 2, 3, 4, 1, 2, 3, 4, 6, 7, 8, 9};
 uint32_t __sysIrqMask;
+
+sys::timeTrigger::timeTrigger(uint16_t msTime)
+    : stamp(sys::getTimeStamp()), timeGap(msTime), triggered(false)
+{
+}
+
+void sys::timeTrigger::loop()
+{
+    uint32_t currentTimeGap;
+
+    currentTimeGap = sys::getTimeStamp() - stamp;
+    if (currentTimeGap > timeGap)
+    {
+        triggered = true;
+        stamp += currentTimeGap;
+    }
+}
 
 namespace sys
 {
@@ -81,6 +111,11 @@ namespace sys
     {
         return (GetSysClockFreq() >> tbPresc[(RCC->CFGR & RCC_CFGR_HPRE) >> RCC_CFGR_HPRE_Pos]);
     }
+    uint32_t GetPCLK2Freq(void)
+    {
+        // return 0;
+        return (GetHCLKFreq() >> tbPresc[(RCC->CFGR & RCC_CFGR_PPRE2) >> RCC_CFGR_PPRE2_Pos]);
+    }
     uint32_t GetPCLK1Freq(void)
     {
         return (GetHCLKFreq() >> tbPresc[(RCC->CFGR & RCC_CFGR_PPRE1) >> RCC_CFGR_PPRE1_Pos]);
@@ -116,10 +151,46 @@ namespace sys
     }
     void delayMs(uint32_t ms)
     {
+        // if(ms == 1)
+        //     delayUs(1000);
+        uint32_t delayCntBackup = __sysDelayCnt;
         __sysDelayCnt = ms;
         while (__sysDelayCnt)
             ;
+        if (delayCntBackup > ms)
+            __sysDelayCnt = delayCntBackup - ms;
     }
+    void delayUs(uint32_t us)
+    {
+        uint32_t tickVal;
+        uint32_t delayCntBackup = __sysDelayCnt;
+        uint32_t freq = __clkFreqAhb >> 2;
+        uint32_t targetTicks;
+
+        targetTicks = us * (freq / 1000000.0f);
+
+        SysTick->CTRL &= ~SysTick_CTRL_ENABLE_Msk;
+
+        tickVal = SysTick->VAL;
+        if (targetTicks <= tickVal)
+        {
+            SysTick->CTRL |= SysTick_CTRL_ENABLE_Msk;
+            targetTicks = tickVal - targetTicks;
+            while (SysTick->VAL > targetTicks)
+                ;
+            // __sysDelayCnt = 1;
+        }
+        else
+        {
+            SysTick->CTRL |= SysTick_CTRL_ENABLE_Msk;
+            __sysDelayCnt = targetTicks / (SysTick->LOAD);
+            while (__sysDelayCnt)
+                ;
+        }
+
+        __sysDelayCnt = delayCntBackup;
+    }
+
     void delayBreak(void)
     {
         __sysDelayCnt = 0;
@@ -130,12 +201,11 @@ namespace sys
         RCC->CFGR &= 0xffffff0f;
         if (div)
             RCC->CFGR |= (div << 4);
+        __sys_clk_update();
         SysTick_Config(GetHCLKFreq() / 1000);
         NVIC_SetPriority(SysTick_IRQn, 0);
     }
 } // namespace sys
-
-using sys::GetSysClockFreq;
 
 extern "C"
 {
@@ -146,7 +216,9 @@ extern "C"
         __sysMsTimeStamp = 0;
         __sysDelayCnt = 0;
         // SysTick_Config(SystemCoreClock / 1000);
-        SysTick_Config(GetSysClockFreq() / 1000);
+        __sys_clk_update();
+
+        SysTick_Config(__clkFreqSys / 1000);
         NVIC_SetPriority(SysTick_IRQn, 0);
     }
 }

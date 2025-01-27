@@ -13,16 +13,19 @@ extern const uint32_t __GPIO_PORT_BASEs[];
 extern const uint32_t __GPIO_PORT_RCC_EN[];
 #define __RCC_GPIO_ENR (RCC->AHBENR)
 #define __EXTI_RCC_EN() (RCC->APB2ENR |= RCC_APB2ENR_EXTI)
+#define __SYSCFG_RCC_EN() (RCC->APB2ENR |= RCC_APB2ENR_SYSCFG)
 
 #define __ADC_RCC_EN() (RCC->APB2ENR |= RCC_APB2ENR_ADC1)
 
 /// uart
 extern const uint32_t __UART_BASEs[];
-extern const uint32_t __UART_RCC_EN[];
-#define __RCC_UART_ENR (*((uint32_t *)(RCC_BASE + 0x1c)))
+// extern const uint32_t __UART_RCC_EN[];
+// #define __RCC_UART_ENR (*((uint32_t *)(RCC_BASE + 0x1c)))
+extern const uint16_t __UART_RCC_ENR_CFG_OFFSETs[];
 extern IRQn_Type const __UART_IRQ[];
 extern uint16_t const *const __UART_Rx_GPIO_AFs[];
 extern uint16_t const *const __UART_Tx_GPIO_AFs[];
+extern uint32_t const __UART_BUS_CFG;
 
 /// tim
 extern const uint32_t __TIM_IDXs[];

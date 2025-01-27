@@ -114,6 +114,30 @@ inline uint8_t IIC_Object::readByte(void)
     return drx;
 }
 
+uint8_t IIC_Object::sendSameByte(uint8_t add, uint8_t reg, uint8_t len, uint8_t txData)
+{
+    if (!this->start())
+        return 1;
+    this->sendByte(add << 1);
+    if (!this->waitAck())
+    {
+        this->stop();
+        return 1;
+    }
+    this->sendByte(reg);
+    this->waitAck();
+    while (len--)
+    {
+        this->sendByte(txData);
+        if (!this->waitAck())
+        {
+            this->stop();
+            return 1;
+        }
+    }
+    this->stop();
+    return 0;
+}
 uint8_t IIC_Object::send(uint8_t add, uint8_t reg, uint8_t len, uint8_t *txData)
 {
     if (!this->start())

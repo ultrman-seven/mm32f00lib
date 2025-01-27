@@ -116,40 +116,55 @@ bool Timer::updated()
     return false;
 }
 
-const uint16_t __TIMx_ChxP_AFs[][4][4] = {
-    {{__GPIO_AF_Val(0, 6, 1), __GPIO_AF_Val(0, 9, 2), 0xffff},
-     {__GPIO_AF_Val(0, 8, 1), __GPIO_AF_Val(0, 10, 2), __GPIO_AF_Val(0, 11, 2), 0xffff},
-     {__GPIO_AF_Val(0, 10, 1), __GPIO_AF_Val(0, 6, 4), 0xffff},
-     {__GPIO_AF_Val(0, 7, 4), 0xffff}},
-    {{},
-     {},
-     {},
-     {}},
-    {{},
-     {},
-     {},
-     {}},
-    {{},
-     {},
-     {},
-     {}}};
-const uint16_t __TIMx_ChxN_AFs[][4][4] = {
-    {{},
-     {},
-     {},
-     {}},
-    {{},
-     {},
-     {},
-     {}},
-    {{},
-     {},
-     {},
-     {}},
-    {{},
-     {},
-     {},
-     {}}};
+const uint16_t __t1_c1p_afs[] = {__GPIO_AF_Val(0, 6, 1), __GPIO_AF_Val(0, 9, 2), 0xffff};
+const uint16_t __t1_c2p_afs[] = {__GPIO_AF_Val(0, 8, 1), __GPIO_AF_Val(0, 10, 2), __GPIO_AF_Val(0, 11, 2), 0xffff};
+const uint16_t __t1_c3p_afs[] = {__GPIO_AF_Val(0, 10, 1), __GPIO_AF_Val(0, 6, 4), 0xffff};
+const uint16_t __t1_c4p_afs[] = {__GPIO_AF_Val(0, 7, 4), 0xffff};
+
+uint16_t const *const __t1_cp_afs[] = {
+    __t1_c1p_afs,
+    __t1_c2p_afs,
+    __t1_c3p_afs,
+    __t1_c4p_afs};
+
+uint16_t const *const *const __TIMx_ChxP_AFs[] = {__t1_cp_afs};
+// const uint16_t __TIMx_ChxP_AFs[][4][4] = {
+//     {{__GPIO_AF_Val(0, 6, 1), __GPIO_AF_Val(0, 9, 2), 0xffff},
+//      {__GPIO_AF_Val(0, 8, 1), __GPIO_AF_Val(0, 10, 2), __GPIO_AF_Val(0, 11, 2), 0xffff},
+//      {__GPIO_AF_Val(0, 10, 1), __GPIO_AF_Val(0, 6, 4), 0xffff},
+//      {__GPIO_AF_Val(0, 7, 4), 0xffff}},
+    // {{},
+    //  {},
+    //  {},
+    //  {}},
+    // {{},
+    //  {},
+    //  {},
+    //  {}},
+    // {{},
+    //  {},
+    //  {},
+    //  {}}
+// };
+
+uint16_t const *const *const __TIMx_ChxN_AFs[] = {__t1_cp_afs};
+// const uint16_t __TIMx_ChxN_AFs[][4][4] = {
+//     // {{},
+//     //  {},
+//     //  {},
+//     //  {}},
+//     // {{},
+//     //  {},
+//     //  {},
+//     //  {}},
+//     // {{},
+//     //  {},
+//     //  {},
+//     //  {}},
+//     {{},
+//      {},
+//      {},
+//      {}}};
 
 pwmType Timer::setPwm(uint8_t ch, const char *p, const char *n)
 {

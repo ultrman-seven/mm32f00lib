@@ -29,8 +29,6 @@ namespace __wyIstream
         struct waitKeyWord
         {
             char const *password;
-            // bool flag;
-            // uint8_t len;
             uint32_t flag : 1;
             uint32_t len : 31;
         };
@@ -39,19 +37,26 @@ namespace __wyIstream
         waitKeyWord start;
         waitKeyWord end;
         FIFO sFifo;
-        // FIFO dFifo;
-        uint8_t *datBuf;
-        uint32_t datLen;
-        // uint32_t datCnt = 0;
-        void (**cmdF)(uint8_t *, uint32_t) = nullptr;
-        uint8_t cmdLen = 0;
+        uint8_t *datBuf = nullptr;
+        uint32_t datLen = 0;
+        uint8_t *argvBuf = nullptr;
+        uint32_t argvBufLen = 0;
+        uint32_t *argcPtr = nullptr;
+        uint8_t triggered;
+        // void (**cmdF)(uint8_t *, uint32_t) = nullptr;
+        void (*cmdF)(uint8_t *, uint32_t) = nullptr;
+        // uint8_t cmdLen = 0;
         inline void reset();
 
     public:
         void byteProcess(uint8_t);
         void setKeyWord(char const *s = nullptr, char const *e = nullptr);
         void setBuf(uint8_t *buf, uint32_t len);
-        void addCmd(void (**callbacks)(uint8_t *, uint32_t), uint8_t l);
+        void setArgvArgcBuff(uint8_t *buf, uint32_t bl, uint32_t *cp);
+        bool checkTriggerState();
+        // void addCmd(void (**callbacks)(uint8_t *, uint32_t), uint8_t l);
+        /// @brief Data format: start sign : x, data length : 1, data : n(0-255), end sign : y
+        /// @param f
         void addCmd(void (*f)(uint8_t *, uint32_t));
     };
 
@@ -60,6 +65,7 @@ namespace __wyIstream
     protected:
         CMD_Listener cmd;
         FIFO fifo;
+        // void setTrigger(char const *start, char const *stop);
 
     public:
         // WyIstream4MCU(/* args */);
@@ -72,12 +78,12 @@ namespace __wyIstream
         ///  there is data in FIFO and u read data successfully. \n
         /// @return false: \n
         ///  no data in FIFO and u get nothing.
+        void resetBuff(void);
         bool readBuff(uint8_t &d);
         bool readBuff(uint8_t *d, uint8_t &len);
         uint32_t getBufDataLen(void);
-
-        void setTrigger(char const *start, char const *stop);
-        void addCMD(void (**f)(uint8_t *, uint32_t), uint32_t len);
+        bool checkTriggerState();
+        // void addCMD(void (**f)(uint8_t *, uint32_t), uint32_t len);
         void addCMD(void (*f)(uint8_t *, uint32_t));
 
         WyIstream4MCU &operator>>(uint8_t &d);

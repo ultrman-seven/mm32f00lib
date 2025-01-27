@@ -72,10 +72,16 @@ GpioPin &GpioPin::operator>>(bool &s)
     return *this;
 }
 
+bool GpioPin::getOutputState(void) { return port->ODR & (this->pin); }
 void GpioPin::set(void) { this->port->BSRR = this->pin; }
 void GpioPin::reset(void) { this->port->BRR = this->pin; }
 void GpioPin::flip(void) { this->operator=(!((this->port->ODR) & (this->pin))); }
 bool GpioPin::read(void) { return this->port->IDR & this->pin; }
+void GpioPin::wait(bool s)
+{
+    while (this->read() != s)
+        ;
+}
 // void GpioPin::operator=(bool s) { s ? (this->port->ODR |= this->pin) : (this->port->ODR &= (~this->pin)); }
 void GpioPin::operator=(bool s) { s ? this->set() : this->reset(); }
 GpioPin &GpioPin::operator=(GPIO::GpioPin &o)
@@ -106,6 +112,7 @@ void (*__GPIO_EXTI_Callbacks[16])(void) = {nullptr};
 
 static uint16_t _GPIO_ExtiFlag;
 
+#if 0
 #define __EXTIx_IRQHandler(__EXTIx)                        \
     if (EXTI->PR & __EXTI_LINE##__EXTIx)                   \
         if (EXTI->IMR & __EXTI_LINE##__EXTIx)              \
@@ -114,8 +121,23 @@ static uint16_t _GPIO_ExtiFlag;
             if (__GPIO_EXTI_Callbacks[__EXTIx] != nullptr) \
                 __GPIO_EXTI_Callbacks[__EXTIx]();          \
             else                                           \
-                _GPIO_ExtiFlag |= (0x01 << __EXTIx);       \
+                _GPIO_ExtiFlag |= (__EXTI_LINE##__EXTIx);  \
         }
+#else
+void __EXTIx_IRQHandler(uint8_t x)
+{
+    uint32_t line = 0x01 << x;
+    if (EXTI->PR & line)
+        if (EXTI->IMR & line)
+        {
+            EXTI->PR = line;
+            if (__GPIO_EXTI_Callbacks[x] != nullptr)
+                __GPIO_EXTI_Callbacks[x]();
+            else
+                _GPIO_ExtiFlag |= (line);
+        }
+}
+#endif
 
 // template <uint8_t _PIN>
 // void __GPIO_SetFlag(void)
@@ -312,6 +334,7 @@ namespace GPIO
         __GPIO_EXTI_Callbacks[pn] = f;
 
         __EXTI_RCC_EN();
+        __SYSCFG_RCC_EN();
         line = 0x01 << pn;
 
         tmp = pn;
@@ -337,17 +360,17 @@ namespace GPIO
         if (pn <= 1)
         {
             extiN = EXTI0_1_IRQn;
-            mask1 = (uint32_t)EXTI0_1_IRQHandler;
+            // mask1 = (uint32_t)EXTI0_1_IRQHandler;
         }
         else if (pn <= 3)
         {
             extiN = EXTI2_3_IRQn;
-            mask1 = (uint32_t)EXTI2_3_IRQHandler;
+            // mask1 = (uint32_t)EXTI2_3_IRQHandler;
         }
         else
         {
             extiN = EXTI4_15_IRQn;
-            mask1 = (uint32_t)EXTI4_15_IRQHandler;
+            // mask1 = (uint32_t)EXTI4_15_IRQHandler;
         }
 
         // NVIC_SetVector(extiN, mask1);

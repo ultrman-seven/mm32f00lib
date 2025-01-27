@@ -58,10 +58,11 @@ namespace GPIO
         // void setOnOff(bool);
         void flip();
         void setMode(Mode m, Speed s = Speed_50MHz);
+        void wait(bool);
         // void setSpeed(GpioSpeed s);
 
         bool read(void);
-        bool getOutputState(void) { return port->ODR & (this->pin); }
+        bool getOutputState(void);
         void operator=(bool s);
         GpioPin &operator=(GpioPin &o);
         bool operator!(void);
@@ -72,7 +73,7 @@ namespace GPIO
         void triggerFlagReset();
     };
 
-#define __GPIO_AF_Val(__port, __pin, __af) ((__port << 12) + (__pin << 8) + __af)
+#define __GPIO_AF_Val(__port, __pin, __af) (((__port) << 12) + ((__pin) << 8) + (__af))
 } // namespace GPIO
 
 #endif /* __MM32_CPP_HAL_WY_LIB_GPIO_HPP__ */

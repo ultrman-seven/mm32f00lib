@@ -22,6 +22,7 @@ namespace IIC
         // IIC_Object(const char *scl, const char *sda, bool exPullUp = true);
         IIC_Object(const char *scl, const char *sda, GPIO::Mode mScl = GPIO::Mode_Out_PP, GPIO::Mode mSda = GPIO::Mode_Out_PP);
         uint8_t send(uint8_t add, uint8_t reg, uint8_t len, uint8_t *txData);
+        uint8_t sendSameByte(uint8_t add, uint8_t reg, uint8_t len, uint8_t txData);
         uint8_t read(uint8_t add, uint8_t reg, uint8_t len, uint8_t *rxData);
         uint8_t read16bitReg(uint8_t add, uint16_t reg, uint8_t len, uint8_t *rxData);
         uint8_t send16bitReg(uint8_t add, uint16_t reg, uint8_t len, uint8_t *txData);

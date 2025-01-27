@@ -36,6 +36,16 @@ namespace TIM
         void clear(void) { tim->CNT = 0; }
         uint32_t getCnt(void) { return tim->CNT; }
     };
+
+    class Encoder: private Timer
+    {
+    private:
+        int32_t count;
+
+    public:
+        Encoder(uint8_t timx, const char *c1, const char *c2, uint32_t period, uint32_t psc);
+        // ~Encoder();
+    };
 } // namespace TIM
 
 #endif /* B1B7122D_239F_405E_976E_DDD2E44039B7 */

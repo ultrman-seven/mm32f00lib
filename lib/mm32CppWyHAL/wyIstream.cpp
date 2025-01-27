@@ -3,10 +3,22 @@
 
 using namespace __wyIstream;
 
-void WyIstream4MCU::setTrigger(char const *start, char const *stop) { cmd.setKeyWord(start, stop); }
-void WyIstream4MCU::addCMD(void (**f)(uint8_t *, uint32_t), uint32_t len) { cmd.addCmd(f, len); }
+// void WyIstream4MCU::setTrigger(char const *start, char const *stop) { cmd.setKeyWord(start, stop); }
+// void WyIstream4MCU::addCMD(void (**f)(uint8_t *, uint32_t), uint32_t len) { cmd.addCmd(f, len); }
 void WyIstream4MCU::addCMD(void (*f)(uint8_t *, uint32_t)) { cmd.addCmd(f); }
+bool WyIstream4MCU::checkTriggerState() { return cmd.checkTriggerState(); }
 uint32_t WyIstream4MCU::getBufDataLen(void) { return fifo.getDataLen(); }
+void WyIstream4MCU::resetBuff(void) { fifo.clear(); }
+bool WyIstream4MCU::readBuff(uint8_t &d)
+{
+    if (fifo.getDataLen())
+    {
+        d = fifo.pop();
+        return true;
+    }
+    d = 0;
+    return false;
+}
 
 void FIFO::setFifoBuf(uint8_t *buf, uint32_t len)
 {
@@ -73,7 +85,7 @@ void CMD_Listener::setKeyWord(char const *s, char const *e)
     start.len = strlen(start.password);
     end.len = strlen(end.password);
 }
-
+#if 0
 void CMD_Listener::addCmd(void (*f)(uint8_t *, uint32_t))
 {
     if (this->datLen <= 4)
@@ -92,6 +104,12 @@ void CMD_Listener::addCmd(void (**callbacks)(uint8_t *, uint32_t), uint8_t l)
     this->cmdF = callbacks;
     this->cmdLen = l;
 }
+#else
+void CMD_Listener::addCmd(void (*f)(uint8_t *, uint32_t))
+{
+    this->cmdF = f;
+}
+#endif
 
 inline void CMD_Listener::reset()
 {
@@ -104,6 +122,23 @@ void CMD_Listener::setBuf(uint8_t *buf, uint32_t len)
     datBuf = buf;
     datLen = len;
     sFifo.setFifoBuf(buf, len);
+}
+
+void CMD_Listener::setArgvArgcBuff(uint8_t *buf, uint32_t bl, uint32_t *cp)
+{
+    this->argvBuf = buf;
+    this->argvBufLen = bl;
+    this->argcPtr = cp;
+}
+
+bool CMD_Listener::checkTriggerState()
+{
+    if(this->triggered)
+    {
+        this->triggered = 0;
+        return true;
+    }
+    return false;
 }
 
 inline bool CMD_Listener::checkKeyWord(waitKeyWord *w)
@@ -124,6 +159,7 @@ inline bool CMD_Listener::checkKeyWord(waitKeyWord *w)
     return false;
 }
 
+#if 0
 void CMD_Listener::byteProcess(uint8_t d)
 {
     sFifo.push(d);
@@ -150,3 +186,40 @@ void CMD_Listener::byteProcess(uint8_t d)
     if (sFifo.getDataLen() == datLen)
         reset();
 }
+#else
+void CMD_Listener::byteProcess(uint8_t d)
+{
+    uint8_t dl;
+    sFifo.push(d);
+    if (0 == start.flag)
+    {
+        if (checkKeyWord(&this->start))
+        {
+            start.flag = 1;
+            sFifo.clear();
+            return;
+        }
+        return;
+    }
+    if (sFifo.getDataLen())
+        dl = sFifo[0] + 1;
+    /// TODO: test
+    if (sFifo.getDataLen() == dl + end.len)
+    {
+        if (checkKeyWord(&this->end))
+        {
+            if (cmdF != nullptr)
+                cmdF(datBuf + 1, datBuf[0]);
+
+            else if (datBuf[0] <= this->argvBufLen)
+            {
+                this->triggered = 0;
+                this->argcPtr[0] = datBuf[0];
+                memcpy(this->argvBuf, this->datBuf + 1, datBuf[0]);
+                this->triggered = 1;
+            }
+        }
+        reset();
+    }
+}
+#endif
