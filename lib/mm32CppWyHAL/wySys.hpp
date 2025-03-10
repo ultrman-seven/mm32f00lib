@@ -48,10 +48,11 @@ namespace sys
     private:
         uint32_t stamp;
         uint16_t timeGap;
+        void (*callback)(void);
 
     public:
         bool triggered;
-        timeTrigger(uint16_t msTime);
+        timeTrigger(uint16_t msTime, void(*callback)(void) = nullptr);
         void loop();
         // ~timeTrigger();
     };

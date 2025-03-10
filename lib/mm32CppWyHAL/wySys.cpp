@@ -40,8 +40,8 @@ bool __funcListRmvIf(void (*a)(void))
 const uint8_t tbPresc[] = {0, 0, 0, 0, 1, 2, 3, 4, 1, 2, 3, 4, 6, 7, 8, 9};
 uint32_t __sysIrqMask;
 
-sys::timeTrigger::timeTrigger(uint16_t msTime)
-    : stamp(sys::getTimeStamp()), timeGap(msTime), triggered(false)
+sys::timeTrigger::timeTrigger(uint16_t msTime, void (*cbk)(void))
+    : stamp(sys::getTimeStamp()), timeGap(msTime), triggered(false), callback(cbk)
 {
 }
 
@@ -52,8 +52,11 @@ void sys::timeTrigger::loop()
     currentTimeGap = sys::getTimeStamp() - stamp;
     if (currentTimeGap > timeGap)
     {
-        triggered = true;
         stamp += currentTimeGap;
+        if (nullptr != callback)
+            callback();
+        else
+            triggered = true;
     }
 }
 
