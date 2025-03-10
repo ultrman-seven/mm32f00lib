@@ -80,7 +80,7 @@ namespace __wyIstream
         ///  no data in FIFO and u get nothing.
         void resetBuff(void);
         bool readBuff(uint8_t &d);
-        bool readBuff(uint8_t *d, uint8_t &len);
+        bool readBuff(void *d, uint8_t len);
         uint32_t getBufDataLen(void);
         bool checkTriggerState();
         // void addCMD(void (**f)(uint8_t *, uint32_t), uint32_t len);

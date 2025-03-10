@@ -68,7 +68,7 @@ namespace GPIO
         bool operator!(void);
         GpioPin &operator<<(bool);
         GpioPin &operator>>(bool &);
-        void setExti();
+        void setExti(void (*callback)(void) = nullptr, uint8_t priority = 1);
         bool isTriggered();
         void triggerFlagReset();
     };

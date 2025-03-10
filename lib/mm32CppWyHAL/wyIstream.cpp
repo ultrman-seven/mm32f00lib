@@ -19,6 +19,15 @@ bool WyIstream4MCU::readBuff(uint8_t &d)
     d = 0;
     return false;
 }
+bool WyIstream4MCU::readBuff(void *d, uint8_t l)
+{
+    uint8_t *ptr = (uint8_t *)d;
+    if (fifo.getDataLen() < l)
+        return false;
+    while (l--)
+        *ptr++ = fifo.pop();
+    return true;
+}
 
 void FIFO::setFifoBuf(uint8_t *buf, uint32_t len)
 {
@@ -133,7 +142,7 @@ void CMD_Listener::setArgvArgcBuff(uint8_t *buf, uint32_t bl, uint32_t *cp)
 
 bool CMD_Listener::checkTriggerState()
 {
-    if(this->triggered)
+    if (this->triggered)
     {
         this->triggered = 0;
         return true;

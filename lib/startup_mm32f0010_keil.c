@@ -1,4 +1,5 @@
-#include <stdint.h>
+#include "reg_common.h"
+#include "core_cm0.h"
 
 /* 定义堆栈和堆的大小 */
 #define STACK_SIZE 0x300 // 堆栈大小
@@ -19,7 +20,9 @@ extern uint8_t __heap_base;
 extern uint8_t __heap_limit;
 
 /* 函数声明 */
-void Reset_Handler(void);
+__NO_RETURN void Reset_Handler(void);
+void Default_Handler(void);
+
 void NMI_Handler(void) __attribute__((weak, alias("Default_Handler")));
 void HardFault_Handler(void) __attribute__((weak, alias("Default_Handler")));
 void MemManage_Handler(void) __attribute__((weak, alias("Default_Handler")));
@@ -51,10 +54,12 @@ void UART2_IRQHandler(void) __attribute__((weak, alias("Default_Handler")));
 extern uint8_t __Vectors_End;
 extern uint8_t __Vectors_Size;
 
+extern const void *InterruptVectorTable[]  __VECTOR_TABLE_ATTRIBUTE;
+
 /* 中断向量表 */
 // __attribute__((section(".isr_vector")))
-__attribute__((section(".reset")))
-const void *InterruptVectorTable[] = {
+// __attribute__((section(".reset")))
+const void *InterruptVectorTable[] __VECTOR_TABLE_ATTRIBUTE = {
     &Stack_Mem[STACK_SIZE], // 堆栈顶地址
     Reset_Handler,          // 复位处理程序
     NMI_Handler,            // NMI
@@ -66,7 +71,7 @@ const void *InterruptVectorTable[] = {
     0,
     0,
     0,                // 保留
-    SVC_Handler,      // SVCall
+    SVC_Handler,      //
     DebugMon_Handler, // 调试监视器
     0,                // 保留
     PendSV_Handler,   // PendSV
@@ -101,23 +106,23 @@ const void *InterruptVectorTable[] = {
     SPI1_IRQHandler,
     0,
     UART1_IRQHandler,
-    UART2_IRQHandler,
+    UART2_IRQHandler
 };
 
 /* 复位处理程序 */
-void Reset_Handler(void)
+__NO_RETURN void Reset_Handler(void)
 {
     extern void SystemInitWy(void);
-    extern int main(void);
 
     /* 初始化堆栈指针 */
-    __asm volatile("MSR MSP, %0" : : "r"(&Stack_Mem[STACK_SIZE]));
+    // __asm volatile("MSR MSP, %0" : : "r"(&Stack_Mem[STACK_SIZE]));
 
     /* 调用系统初始化函数 */
     SystemInitWy();
 
     /* 跳转到主程序入口 */
-    main();
+    // main();
+    __PROGRAM_START();
 }
 
 /* 默认中断处理程序 */

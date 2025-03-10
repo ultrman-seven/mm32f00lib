@@ -1,8 +1,10 @@
 #include "wyFlash.hpp"
 #include "cppHalReg.hpp"
-// #include "reg_flash.h"
 
-using flash::FlashBlock;
+using flash::__FlashBase;
+using flash::Counter;
+using flash::FlashArray;
+using flash::paraSaver;
 
 typedef enum
 {
@@ -22,16 +24,50 @@ typedef enum
     FLASH_FLAG_OPTERR = FLASH_OBR_OPTERR     ///< FLASH Option Byte error flag
 } FLASH_FLAG_TypeDef;
 
+typedef enum
+{
+    FLASH_Latency_0 = FLASH_ACR_LATENCY_0, ///< FLASH Zero Latency cycle
+    FLASH_Latency_1 = FLASH_ACR_LATENCY_1, ///< FLASH One Latency cycle
+    FLASH_Latency_2 = FLASH_ACR_LATENCY_2, ///< FLASH Two Latency cycles
+    FLASH_Latency_3 = FLASH_ACR_LATENCY_3  ///< FLASH Three Latency cycles
+} FLASH_Latency_TypeDef;
+
+#define FLASH_KEY1 ((u32)0x45670123)
+#define FLASH_KEY2 ((u32)0xCDEF89AB)
+inline void __FlashLock()
+{
+    FLASH->CR |= FLASH_CR_LOCK;
+}
+
+inline void __FlashUnlock()
+{
+    FLASH->KEYR = FLASH_KEY1;
+    FLASH->KEYR = FLASH_KEY2;
+}
+
+void __FLASH_SetLatency(FLASH_Latency_TypeDef latency)
+{
+    FLASH->ACR = (FLASH->ACR & (~FLASH_ACR_LATENCY)) | latency;
+}
+
 void FLASH_ClearFlag(uint16_t flag)
 {
     FLASH->SR = flag;
 }
-// #include "wySys.hpp"
+
+void __FlashEraseSector_NoWait(uint32_t address)
+{
+    FLASH_ClearFlag(FLASH_FLAG_BSY | FLASH_SR_PGERR | FLASH_SR_WRPRTERR | FLASH_FLAG_EOP);
+
+    FLASH->CR |= FLASH_CR_PER;
+    FLASH->AR = address;
+    FLASH->CR |= FLASH_CR_STRT;
+}
+
 uint8_t FlashWaitForLastOperation(uint32_t time_out = 0xff)
 {
     volatile uint32_t i;
     uint8_t ret;
-    // sys::delayMs(5);
     do
     {
         ret =
@@ -58,7 +94,13 @@ uint8_t FlashProgramHalfWord(uint32_t address, uint16_t data)
     return FlashWaitForLastOperation(0xf);
 }
 
-uint8_t FlashBlock::program(uint8_t *data, uint8_t dataLen)
+__FlashBase::__FlashBase(char const *const markStr, uint32_t startAdd, const uint32_t bl)
+    : mkStr(markStr), addressStart(startAdd), blockLen(bl)
+{
+    __FLASH_SetLatency(FLASH_Latency_1);
+}
+
+uint8_t __FlashBase::program(uint8_t *data, uint8_t dataLen)
 {
     uint16_t *dataPtr = (uint16_t *)data;
     uint16_t dataTail;
@@ -90,28 +132,18 @@ uint8_t FlashBlock::program(uint8_t *data, uint8_t dataLen)
     return 1;
 }
 
-typedef enum
+paraSaver::paraSaver(char const *markStr, uint32_t _dataLen, uint32_t _startAdd, const uint32_t _blockLen)
+    : __FlashBase(markStr, _startAdd, _blockLen), dataLen(_dataLen)
 {
-    FLASH_Latency_0 = FLASH_ACR_LATENCY_0, ///< FLASH Zero Latency cycle
-    FLASH_Latency_1 = FLASH_ACR_LATENCY_1, ///< FLASH One Latency cycle
-    FLASH_Latency_2 = FLASH_ACR_LATENCY_2, ///< FLASH Two Latency cycles
-    FLASH_Latency_3 = FLASH_ACR_LATENCY_3  ///< FLASH Three Latency cycles
-} FLASH_Latency_TypeDef;
-
-void FLASH_SetLatency(FLASH_Latency_TypeDef latency)
-{
-    FLASH->ACR = (FLASH->ACR & (~FLASH_ACR_LATENCY)) | latency;
-}
-
-FlashBlock::FlashBlock(char const *markStr, uint32_t _dataLen, uint32_t _startAdd, const uint32_t _blockLen)
-    : addressStart(_startAdd), mkStr(markStr), blockLen(_blockLen), dataLen(_dataLen)
-{
-    FLASH_SetLatency(FLASH_Latency_1);
-    deflowerVirgin();
+    if (!deflowerVirgin())
+    {
+        if (this->scanTill0xff(this->dataLen) == 1)
+            this->resetBlock();
+    }
 }
 
 #include "string.h"
-uint8_t FlashBlock::load(void *data)
+uint8_t paraSaver::load(void *data)
 {
     uint8_t *tmp;
     if (this->addressOffset <= this->mkStrLen)
@@ -121,17 +153,17 @@ uint8_t FlashBlock::load(void *data)
     return 0;
 }
 
-bool FlashBlock::isEmpty()
+bool paraSaver::isEmpty()
 {
     if (this->addressOffset <= this->mkStrLen)
         return true;
     return false;
 }
 
-uint8_t FlashBlock::save(void *data)
+uint8_t paraSaver::save(void *data)
 {
     uint8_t optState;
-    this->unlock();
+    __FlashUnlock();
 
     /// TODO
     if ((addressOffset + this->dataLen) >= this->blockLen)
@@ -139,30 +171,15 @@ uint8_t FlashBlock::save(void *data)
         this->resetBlock();
     }
     optState = this->program((uint8_t *)data, this->dataLen);
-    this->lock();
+    __FlashLock();
     return optState;
 }
 
-#define FLASH_KEY1 ((u32)0x45670123)
-#define FLASH_KEY2 ((u32)0xCDEF89AB)
-
-void FlashBlock::lock(void)
-{
-    FLASH->CR |= FLASH_CR_LOCK;
-}
-void FlashBlock::unlock(void)
-{
-    FLASH->KEYR = FLASH_KEY1;
-    FLASH->KEYR = FLASH_KEY2;
-}
-
-uint8_t FlashBlock::deflowerVirgin()
+uint8_t __FlashBase::deflowerVirgin()
 {
     uint8_t isVirgin = 0;
     char *flashData = (char *)addressStart;
     char const *markStr = this->mkStr;
-
-    // FLASH_SetLatency(FLASH_Latency_1);
 
     this->mkStrLen = 0;
     while (markStr[mkStrLen])
@@ -178,21 +195,13 @@ uint8_t FlashBlock::deflowerVirgin()
         ++this->mkStrLen;
 
     this->addressOffset += mkStrLen;
-
     if (isVirgin)
         this->resetBlock();
-    else
-    {
-        if (this->scanTill0xff() == 1)
-            this->resetBlock();
-    }
-
     return isVirgin;
 }
 
-uint8_t FlashBlock::scanTill0xff()
+uint8_t __FlashBase::scanTill0xff(uint8_t dl)
 {
-    uint8_t dl = dataLen;
     uint8_t offsetStep;
     uint8_t cnt;
     uint16_t *tmp;
@@ -204,7 +213,6 @@ uint8_t FlashBlock::scanTill0xff()
     offsetStep = dl;
     dl >>= 1;
 
-    /// TODO: need to test
     while (this->addressOffset < this->blockLen)
     {
         tmp = (uint16_t *)(this->addressStart + this->addressOffset);
@@ -222,44 +230,130 @@ uint8_t FlashBlock::scanTill0xff()
     }
 
     return 1;
-
-    // if (this->addressOffset >= this->blockLen)
-    //     return 1;
-    // tmp = (uint16_t *)(this->addressStart + this->addressOffset);
-
-    // while (this->addressOffset < this->blockLen)
-    // {
-    //     if (*tmp++ == 0xffff)
-    //         return 0;
-    //     this->addressOffset += 2;
-    // }
-
-    // return 1;
 }
 
-void FlashBlock::eraseSector()
+void __FlashBase::resetBlock(void)
 {
-    FLASH_ClearFlag(FLASH_FLAG_BSY | FLASH_SR_PGERR | FLASH_SR_WRPRTERR | FLASH_FLAG_EOP);
-
-    FLASH->CR |= FLASH_CR_PER;
-    FLASH->AR = addressStart;
-    FLASH->CR |= FLASH_CR_STRT;
-    FlashWaitForLastOperation(0xfff);
-}
-
-void FlashBlock::resetBlock(void)
-{
+    __FlashUnlock();
+    __FlashEraseSector_NoWait(this->addressStart);
     this->mkStrLen = strlen(this->mkStr);
-
-    this->unlock();
-    this->eraseSector();
-    this->lock();
-
-    this->addressOffset = 0;
-    this->unlock();
-    this->program((uint8_t *)mkStr, mkStrLen);
-    this->lock();
-
     if (this->mkStrLen & 0x01)
         ++this->mkStrLen;
+    this->addressOffset = 0;
+    FlashWaitForLastOperation(0xfff);
+    this->program((uint8_t *)mkStr, mkStrLen);
+    __FlashLock();
 }
+
+FlashArray::FlashArray(const char *mark, uint8_t us, uint32_t startAdd, const uint32_t blockLen)
+    : __FlashBase(mark, startAdd, blockLen), unitSize(us)
+{
+    if (!deflowerVirgin())
+    {
+        if (this->scanTill0xff(this->unitSize) == 1)
+            this->resetBlock();
+    }
+    this->arrayLen = this->addressOffset - this->mkStrLen;
+    this->arrayLen /= this->unitSize;
+}
+
+bool FlashArray::append(uint8_t *dat)
+{
+    bool err = false;
+    if (this->addressOffset + this->unitSize >= this->blockLen)
+    {
+        clearAll();
+        err = true;
+    }
+    __FlashUnlock();
+    this->program(dat, unitSize);
+    __FlashLock();
+    ++this->arrayLen;
+    return err;
+}
+
+void FlashArray::clearAll(void)
+{
+    this->resetBlock();
+    this->arrayLen = 0;
+}
+
+bool FlashArray::searchData(uint8_t *data)
+{
+    uint32_t cnt = this->arrayLen;
+    uint32_t add = this->addressStart + this->mkStrLen;
+    while (cnt--)
+    {
+        if (memcmp(data, (void *)add, this->unitSize) == 0)
+            return true;
+        add += this->unitSize;
+    }
+    return false;
+}
+
+Counter::Counter(const char *mark, uint32_t addressStart, uint32_t BlockLen)
+    : __FlashBase(mark, addressStart, BlockLen)
+{
+    uint8_t cnt4mark;
+    uint16_t tmp;
+    if (!deflowerVirgin())
+    {
+        if (this->scanTill0xff(2) == 1)
+            this->resetBlock();
+    }
+    if (this->addressOffset <= this->mkStrLen)
+    {
+        cnt = 0;
+        this->markVal = 0;
+        return;
+    }
+
+    memcpy(&this->markVal, (void *)(this->addressStart + this->addressOffset - 2), 2);
+    cnt = this->addressOffset - this->mkStrLen - 2;
+    cnt *= 8;
+
+    tmp = this->markVal;
+    if (0 == tmp)
+    {
+        this->markVal = 0;
+        this->cnt += 16;
+        return;
+    }
+    while (0 == (tmp & 0x01))
+    {
+        ++cnt;
+        tmp >>= 1;
+    }
+}
+
+void Counter::add()
+{
+    if (this->markVal == 0)
+    {
+        this->markVal = 0xfffe;
+        // if(this.)
+        this->addressOffset += 2;
+    }
+}
+
+void Counter::reset()
+{
+    this->cnt = 0;
+    this->resetBlock();
+}
+
+uint32_t Counter::operator++() //++a
+{
+    this->add();
+    return this->cnt;
+}
+
+uint32_t Counter::operator++(int) // a++
+{
+    uint32_t cntLast;
+    cntLast = this->cnt;
+    this->add();
+    return cntLast;
+}
+
+uint32_t Counter::getCount() { return this->cnt; }

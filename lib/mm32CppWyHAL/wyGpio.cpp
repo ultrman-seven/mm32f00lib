@@ -153,10 +153,10 @@ void __EXTIx_IRQHandler(uint8_t x)
 //     __GPIO_SetFlag<8>, __GPIO_SetFlag<9>, __GPIO_SetFlag<10>, __GPIO_SetFlag<11>,
 //     __GPIO_SetFlag<12>, __GPIO_SetFlag<13>, __GPIO_SetFlag<14>, __GPIO_SetFlag<15>};
 
-void GpioPin::setExti()
+void GpioPin::setExti(void (*callback)(void),uint8_t priority)
 {
     // __GPIO_EXTI_Callbacks[this->pinNum] = __GPIO_EXTI_FLG_FUNs[this->pinNum];
-    __GPIO_EXTI_Callbacks[this->pinNum] = nullptr;
+    __GPIO_EXTI_Callbacks[this->pinNum] = callback;
 
     uint8_t pn = this->pinNum;
     uint8_t tmp, portIdx;
@@ -177,8 +177,11 @@ void GpioPin::setExti()
     EXTI->CR[tmp] |= mask2;
 
     EXTI->IMR |= this->pin;
+
+    // If there is no PULL-DOWN, then the FALLING edge needs to trigger
     if (this->currentMode != Mode_IPD)
         EXTI->FTSR |= this->pin;
+    // If there is no PULL-UP, then the RAISING edge needs to trigger
     if (this->currentMode != Mode_IPU)
         EXTI->RTSR |= this->pin;
 
@@ -191,7 +194,7 @@ void GpioPin::setExti()
     else
         extiN = EXTI4_15_IRQn;
 
-    NVIC_SetPriority(extiN, 1);
+    NVIC_SetPriority(extiN, priority);
     NVIC_EnableIRQ(extiN);
 }
 
