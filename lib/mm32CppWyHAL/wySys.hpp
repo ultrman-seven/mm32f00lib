@@ -43,7 +43,7 @@ namespace sys
     uint32_t GetHCLKFreq(void);
     void setHclkDiv(hClkDiv d);
 
-    class timeTrigger
+    class taskMsPeriod
     {
     private:
         uint32_t stamp;
@@ -52,11 +52,24 @@ namespace sys
 
     public:
         bool triggered;
-        timeTrigger(uint16_t msTime, void(*callback)(void) = nullptr);
+        taskMsPeriod(uint16_t msTime, void (*callback)(void) = nullptr);
         void loop();
         // ~timeTrigger();
     };
 
+    class taskMsDelay
+    {
+    private:
+        uint32_t stamp;
+        uint16_t timeGap;
+        uint8_t state;
+        void (*callback)(void);
+
+    public:
+        taskMsDelay();
+        void start(uint16_t msTime, void (*callback)(void) = nullptr);
+        void loop();
+    };
 }
 
 extern "C"
