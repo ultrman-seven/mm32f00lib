@@ -16,11 +16,11 @@ namespace ADC
     class ChannelScan
     {
     private:
-        uint8_t chNum;
         uint32_t regBackup_chAny0;
         uint32_t regBackup_chAny1;
 
     public:
+        uint8_t chNum;
         ChannelScan();
         ChannelScan(char const *const *pinLists, uint8_t nums);
         ChannelScan(Channel const *chLists, uint8_t nums);
@@ -34,6 +34,7 @@ namespace ADC
     };
 
     uint16_t getAdcVal(const char *pin);
+    void adcGetAllChsVal(void);
 } // namespace ADC
 
 #endif /* E0EE71C5_1BE0_4B15_BE34_B7DDD8CDB4A6 */
