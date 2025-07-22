@@ -60,6 +60,12 @@ void sys::taskMsPeriod::loop()
     }
 }
 
+void sys::taskMsPeriod::reset()
+{
+    stamp = sys::getTimeStamp();
+    triggered = false;
+}
+
 sys::taskMsDelay::taskMsDelay()
     : stamp(0), timeGap(0), state(0), callback(nullptr)
 {

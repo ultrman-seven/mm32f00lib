@@ -190,6 +190,10 @@ void ChannelScan::configReg()
 
     __adc1IRQ_Callback = adcGetAllChsVal; // 设置中断回调函数
 
+    // 采样时间设置
+    ADC1->CFGR &= ~ADC_CFGR_SAMCTL;
+    // ADC1->CFGR |= ADC_CFGR_SAMCTL_13_5;
+    ADC1->CFGR |= ADC_CFGR_SAMCTL_41_5;
     // // 配置中断
     // ADC1->ADCR |= ADC_CR_ADIE; // 使能 ADC 中断
 

@@ -54,6 +54,7 @@ namespace sys
         bool triggered;
         taskMsPeriod(uint16_t msTime, void (*callback)(void) = nullptr);
         void loop();
+        void reset();
         // ~timeTrigger();
     };
 
