@@ -102,7 +102,8 @@ __FlashBase::__FlashBase(char const *const markStr, uint32_t startAdd, const uin
 
 uint8_t __FlashBase::program(uint8_t *data, uint8_t dataLen)
 {
-    uint16_t *dataPtr = (uint16_t *)data;
+    // uint16_t *dataPtr = (uint16_t *)data;
+    uint8_t *dataPtr = data;
     uint16_t dataTail;
     uint8_t cnt = dataLen;
     uint8_t state;
@@ -117,7 +118,9 @@ uint8_t __FlashBase::program(uint8_t *data, uint8_t dataLen)
     cnt >>= 1;
     while (cnt--)
     {
-        state = FlashProgramHalfWord(addressStart + addressOffset, *dataPtr++);
+        // state = FlashProgramHalfWord(addressStart + addressOffset, *dataPtr++);
+        state = FlashProgramHalfWord(addressStart + addressOffset, dataPtr[0] + (dataPtr[1] << 8));
+        dataPtr += 2;
         addressOffset += 2;
         if (state == FLASH_TIMEOUT)
             return 0;
