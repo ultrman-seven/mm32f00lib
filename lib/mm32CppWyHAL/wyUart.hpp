@@ -12,6 +12,10 @@ namespace UART
         uint8_t irqMode;
         uint8_t num;
         UART_TypeDef *uart;
+        uint8_t *txBuf;
+        uint32_t txLen;
+        void *txOk_Arg;
+        void (*txOk_Callback)(void *);
         void (*IRQ_Callback)(uint8_t);
         inline void nvicCfg();
         // __wyIstream::FIFO fifo;
@@ -22,6 +26,7 @@ namespace UART
         // ~Serial();
         // __wyIstream::CMD_Listener cmdListener;
         void sendByte(uint8_t dat);
+        void sendByte(uint8_t *dat, uint32_t len, void (*cbk)(void *), void *arg);
         void sendByte(uint8_t *dat, uint8_t len);
         void iqrHandler();
         // bool received(void);
@@ -36,6 +41,7 @@ namespace UART
         void setInterrupt(void (*callback)(uint8_t));
         void interruptCMD(bool);
 
+        inline void __uartTxcIRQ_Callback();
         // void setDMA(uint8_t *add, uint8_t len);
 
         // virtual void putChar(uint8_t c);

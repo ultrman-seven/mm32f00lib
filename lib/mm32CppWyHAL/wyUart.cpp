@@ -91,6 +91,19 @@ void Serial::sendByte(uint8_t *dat, uint8_t len)
     }
 }
 
+void Serial::sendByte(uint8_t *dat, uint32_t len, void (*cbk)(void *), void *arg)
+{
+    this->txBuf = dat;
+    this->txLen = len;
+    this->txOk_Callback = cbk;
+    this->txOk_Arg = arg;
+
+    this->uart->IER |= 0x04;
+    NVIC_SetPriority(__UART_IRQ[this->num], 1);
+    NVIC_EnableIRQ(__UART_IRQ[this->num]);
+    __uartTxcIRQ_Callback();
+}
+
 enum __uartIrqMode
 {
     __uartIrqMode_User = 0,
@@ -135,6 +148,21 @@ inline void Serial::nvicCfg()
 #if !__UART_WTF
 void (*__uartRxIRQ_Callbacks[__UART_TotalNum])(uint8_t) = {nullptr, nullptr};
 void *__uartADT_ptr[__UART_TotalNum] = {nullptr, nullptr};
+
+inline void Serial::__uartTxcIRQ_Callback()
+{
+    if (this->txLen)
+    {
+        --(this->txLen);
+        this->uart->TDR = (*(this->txBuf) & (uint8_t)0xFF);
+        ++(this->txBuf);
+    }
+    else
+    {
+        if (this->txOk_Callback)
+            this->txOk_Callback(this->txOk_Arg);
+    }
+}
 
 template <uint32_t uartIdx, typename T>
 void __uartRxIRQ_Lib(uint8_t d)
@@ -235,14 +263,19 @@ void Serial::setInterrupt(void (*f)(uint8_t))
 #if __UART_WTF
 #define __UARTx_IRQHandler(__UARTx) __uartX_objPtr[__UARTx - 1]->iqrHandler()
 #else
-#define __UARTx_IRQHandler(__UARTx)                        \
-    if (UART##__UARTx->ISR & 0x02)                         \
-    {                                                      \
-        uint32_t rd;                                       \
-        UART##__UARTx->ICR = 0x02;                         \
-        rd = UART##__UARTx->RDR;                           \
-        if (__uartRxIRQ_Callbacks[__UARTx - 1] != nullptr) \
-            __uartRxIRQ_Callbacks[__UARTx - 1](rd & 0xff); \
+#define __UARTx_IRQHandler(__UARTx)                           \
+    if (UART##__UARTx->ISR & 0x02)                            \
+    {                                                         \
+        uint32_t rd;                                          \
+        UART##__UARTx->ICR = 0x02;                            \
+        rd = UART##__UARTx->RDR;                              \
+        if (__uartRxIRQ_Callbacks[__UARTx - 1] != nullptr)    \
+            __uartRxIRQ_Callbacks[__UARTx - 1](rd & 0xff);    \
+    }                                                         \
+    if (UART##__UARTx->ISR & 0x04)                            \
+    {                                                         \
+        UART##__UARTx->ICR = 0x04;                            \
+        __uartX_objPtr[__UARTx - 1]->__uartTxcIRQ_Callback(); \
     }
 #endif
 
