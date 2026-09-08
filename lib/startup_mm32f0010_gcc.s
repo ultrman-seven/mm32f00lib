@@ -22,9 +22,21 @@ defined in linker script */
   .weak Reset_Handler
   .type Reset_Handler, %function
 Reset_Handler:
+
+  ldr   r0, =_sstack
+  ldr   r1, =_estack
+  ldr   r2, =0xFeedBeef
+mov_loop:
+  cmp   r0, r1
+  bhs   stack_fill_done
+  str   r2, [r0]
+  adds  r0, r0, #4
+  b     mov_loop
+stack_fill_done:
+
   ldr   r0, =_estack
   mov   sp, r0          /* set stack pointer */
-  
+
 /* Call the clock system initialization function.*/
 @   bl  SystemInit
   bl  SystemInitWy
