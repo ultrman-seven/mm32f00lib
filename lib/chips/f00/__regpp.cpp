@@ -28,6 +28,9 @@ const uint8_t __TIM_IDXs[] = {
     6, 6, 6, 6, 6,
     6, 6, 6, 2};
 
+const uint16_t __I2C1_Scl_GPIO_AFs[] = {__GPIO_AF_Val(0, 0, 3), __GPIO_AF_Val(0, 5, 3), __GPIO_AF_Val(0, 13, 3), 0xffff};
+const uint16_t __I2C1_Sda_GPIO_AFs[] = {__GPIO_AF_Val(0, 1, 3), __GPIO_AF_Val(0, 4, 3), 0xffff};
+
 const uint16_t __UART1_Rx_GPIO_AFs[] = {__GPIO_AF_Val(0, 0, 1), __GPIO_AF_Val(0, 3, 1), __GPIO_AF_Val(0, 13, 1), 0xffff};
 const uint16_t __UART1_Tx_GPIO_AFs[] = {__GPIO_AF_Val(0, 12, 1), __GPIO_AF_Val(0, 14, 1), 0xffff};
 const uint16_t __UART2_Rx_GPIO_AFs[] = {__GPIO_AF_Val(0, 13, 2), 0xffff};
@@ -35,6 +38,9 @@ const uint16_t __UART2_Tx_GPIO_AFs[] = {__GPIO_AF_Val(0, 1, 2), 0xffff};
 
 uint16_t const *const __UART_Rx_GPIO_AFs[] = {__UART1_Rx_GPIO_AFs, __UART2_Rx_GPIO_AFs};
 uint16_t const *const __UART_Tx_GPIO_AFs[] = {__UART1_Tx_GPIO_AFs, __UART2_Tx_GPIO_AFs};
+
+uint16_t const *const __I2C_Scl_GPIO_AFs[] = {__I2C1_Scl_GPIO_AFs};
+uint16_t const *const __I2C_Sda_GPIO_AFs[] = {__I2C1_Sda_GPIO_AFs};
 
 IRQn_Type const __UART_IRQ[] = {UART1_IRQn, UART2_IRQn};
 IRQn_Type const __TIM_IRQ[] = {TIM1_BRK_UP_TRG_COM_IRQn, TIM3_IRQn, TIM14_IRQn};

@@ -30,6 +30,10 @@ extern uint32_t const __UART_BUS_CFG;
 extern uint32_t const __UART_BUS_CFG;
 extern const uint16_t __UART_RCC_ENR_CFG_OFFSETs[];
 
+/// iic
+extern uint16_t const *const __I2C_Scl_GPIO_AFs[];
+extern uint16_t const *const __I2C_Sda_GPIO_AFs[];
+
 /// tim
 extern const uint8_t __TIM_IDXs[];
 extern const uint32_t __TIM_BASEs[];
