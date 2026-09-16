@@ -140,13 +140,13 @@ g_pfnVectors:
   .word  0
   .word  0
   .word  0
-  .word  ADC1_COMP_IRQHandler              /* ADC1, COMP1 and COMP2         */
+  .word  ADC1_IRQHandler              /* ADC1, COMP1 and COMP2         */
   .word  TIM1_BRK_UP_TRG_COM_IRQHandler    /* TIM1 Break, Update, Trigger and Commutation */
   .word  TIM1_CC_IRQHandler                /* TIM1 Capture Compare         */
   .word  0
   .word  TIM3_IRQHandler                   /* TIM3                         */
-  .word  TIM6_DAC_IRQHandler               /* TIM6 and DAC                 */
-  .word  TIM7_IRQHandler                   /* TIM7                         */
+  .word  0               /* TIM6 and DAC                 */
+  .word  0                   /* TIM7                         */
   .word  TIM14_IRQHandler                  /* TIM14                        */
   .word  0
   .word  0
@@ -214,8 +214,8 @@ g_pfnVectors:
   .weak      EXTI4_15_IRQHandler
   .thumb_set EXTI4_15_IRQHandler,Default_Handler
 
-  .weak      ADC1_COMP_IRQHandler
-  .thumb_set ADC1_COMP_IRQHandler,Default_Handler
+  .weak      ADC1_IRQHandler
+  .thumb_set ADC1_IRQHandler,Default_Handler
 
   .weak      TIM1_BRK_UP_TRG_COM_IRQHandler
   .thumb_set TIM1_BRK_UP_TRG_COM_IRQHandler,Default_Handler
@@ -225,12 +225,6 @@ g_pfnVectors:
 
   .weak      TIM3_IRQHandler
   .thumb_set TIM3_IRQHandler,Default_Handler
-
-  .weak      TIM6_DAC_IRQHandler
-  .thumb_set TIM6_DAC_IRQHandler,Default_Handler
-
-  .weak      TIM7_IRQHandler
-  .thumb_set TIM7_IRQHandler,Default_Handler
 
   .weak      TIM14_IRQHandler
   .thumb_set TIM14_IRQHandler,Default_Handler
