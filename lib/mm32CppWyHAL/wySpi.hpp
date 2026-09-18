@@ -33,7 +33,7 @@ namespace SPI
         SpiObject(uint8_t num, const char *sclk,
                   const char *mosi = nullptr, const char *miso = nullptr,
                   GPIO::Mode mosiMode = GPIO::Mode_AF_PP,
-                  uint16_t clkDiv = 8, uint8_t clockCfg);
+                  uint16_t clkDiv = 8, uint8_t clockCfg = Spi_ClkCfg_Edge1High);
         // ~SpiObject();
         uint8_t readWrite(uint8_t);
         void readWriteAsync(uint8_t *txBuf, uint8_t *rxBuf, uint32_t len, void (*cbk)(void *), void *arg);

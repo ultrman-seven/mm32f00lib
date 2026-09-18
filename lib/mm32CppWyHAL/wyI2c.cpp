@@ -31,14 +31,12 @@ IIC_Object::IIC_Object(const char *sclPin, const char *sdaPin, GPIO::Mode mScl, 
 #define I2cIt_TxAbort 0x0040
 #define I2cIt_StopDet 0x0200
 #define I2cIt_StartDet 0x0400
-// GpioPin nm("a12");
 
 IIC_HardwareMasterObject::IIC_HardwareMasterObject(uint8_t channel, const char *scl, const char *sda, uint16_t clkHighCnt, uint16_t clkLowCnt, uint8_t fastMode)
 {
     uint16_t cr;
     uint8_t af = 0xff;
     uint8_t ch = channel - 1;
-    // nm = 1;
     this->i2c = I2C1;
     // RCC
     RCC->APB1ENR |= (RCC_APB1ENR_I2C1);

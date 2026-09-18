@@ -28,11 +28,29 @@ namespace GPIO
         Speed_50MHz
     } Speed;
 
+    extern "C"
+    {
+        typedef struct
+        {
+            uint8_t fsm;
+            uint8_t antiTickCnt;
+            uint8_t mulCnt;
+            uint16_t longTickCnt;
+            void (*cb)(uint8_t, void *);
+            void (*mulCb)(uint8_t, void *);
+            void *arg;
+        } __KeyBaseHandle_t;
+
+#define KeyPressKind_Short 0
+#define KeyPressKind_Long 1
+    }
+
     void afConfig(const char *pin, uint8_t af, Mode m);
     void modeConfig(const char *, Mode m, Speed s = Speed_50MHz);
     void modeConfig(GPIO_TypeDef *, uint8_t p, Mode m, Speed s = Speed_50MHz);
     void extiConfig(const char *, void (*)(void), Mode = Mode_IPU);
     uint8_t afTable2afVal(char const *p, uint16_t const *table);
+
     class GpioPin
     {
     private:
@@ -73,6 +91,36 @@ namespace GPIO
         void triggerFlagReset();
     };
 
+    class KeyDualEdge
+    {
+    private:
+        uint8_t pinNum;
+        uint8_t crtEdge;
+        GPIO_TypeDef *gpio;
+        __KeyBaseHandle_t highTrig;
+        __KeyBaseHandle_t lowTrig;
+        // uint32_t timestamp;
+
+    public:
+        KeyDualEdge(const char *pinName);
+        void setHighCbk(void *arg, void (*cbk)(uint8_t, void *), void (*mul)(uint8_t, void *));
+        void setLowCbk(void *arg, void (*cbk)(uint8_t, void *), void (*mul)(uint8_t, void *));
+        void loopTick();
+    };
+
+    class Key
+    {
+    private:
+        uint8_t pinNum;
+        uint8_t activeLevel;
+        GPIO_TypeDef *gpio;
+        __KeyBaseHandle_t base;
+
+    public:
+        Key(const char *pinName, uint8_t activeLevel, void *arg, void (*cbk)(uint8_t, void *), void (*mul)(uint8_t, void *));
+        bool isActive();
+        void loopTick();
+    };
 #define __GPIO_AF_Val(__port, __pin, __af) (((__port) << 12) + ((__pin) << 8) + (__af))
 } // namespace GPIO
 

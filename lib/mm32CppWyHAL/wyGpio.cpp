@@ -1,4 +1,6 @@
 #include "wyGpio.hpp"
+#include "wySys.hpp"
+
 #include "reg_exti.h"
 #include "reg_common.h"
 #include "core_cm0.h"
@@ -153,7 +155,7 @@ void __EXTIx_IRQHandler(uint8_t x)
 //     __GPIO_SetFlag<8>, __GPIO_SetFlag<9>, __GPIO_SetFlag<10>, __GPIO_SetFlag<11>,
 //     __GPIO_SetFlag<12>, __GPIO_SetFlag<13>, __GPIO_SetFlag<14>, __GPIO_SetFlag<15>};
 
-void GpioPin::setExti(void (*callback)(void),uint8_t priority)
+void GpioPin::setExti(void (*callback)(void), uint8_t priority)
 {
     // __GPIO_EXTI_Callbacks[this->pinNum] = __GPIO_EXTI_FLG_FUNs[this->pinNum];
     __GPIO_EXTI_Callbacks[this->pinNum] = callback;
@@ -201,6 +203,242 @@ void GpioPin::setExti(void (*callback)(void),uint8_t priority)
 bool GpioPin::isTriggered() { return this->pin & _GPIO_ExtiFlag; }
 void GpioPin::triggerFlagReset() { _GPIO_ExtiFlag &= (~(this->pin)); }
 
+#include "string.h"
+
+extern "C"
+{
+    enum
+    {
+        KeyFsm_Idle = 0,
+        KeyFsm_AntiPressedShake,
+        KeyFsm_OnShort,
+        KeyFsm_OnLong,
+        KeyFsm_ShortAnti,
+        KeyFsm_LongAnti,
+        KeyFsm_mulWait,
+        KeyFsm_mulAnti,
+        KeyFsm_evtShort,
+        KeyFsm_evtLong,
+        // KeyFsm_evtMul
+    };
+    static inline void __KeyBaseInit(__KeyBaseHandle_t *handle)
+    {
+        memset(handle, 0, sizeof(__KeyBaseHandle_t));
+        handle->fsm = KeyFsm_Idle;
+    }
+
+#define _KeyAntiShakeTick 2
+
+    // __attribute__((noinline))
+    static void __KeyBaseloopByMsTick(__KeyBaseHandle_t *handle, uint8_t triggered)
+    {
+        switch (handle->fsm)
+        {
+        case KeyFsm_Idle:
+            if (triggered)
+            {
+                handle->fsm = KeyFsm_AntiPressedShake;
+                handle->antiTickCnt = 0;
+            }
+            break;
+        case KeyFsm_AntiPressedShake:
+            if (triggered)
+            {
+                ++(handle->antiTickCnt);
+                if (handle->antiTickCnt >= _KeyAntiShakeTick)
+                {
+                    handle->fsm = KeyFsm_OnShort;
+                    handle->longTickCnt = 0;
+                }
+            }
+            else
+                handle->fsm = KeyFsm_Idle;
+            break;
+        case KeyFsm_OnShort:
+            if (triggered)
+            {
+                ++(handle->longTickCnt);
+                if ((handle->longTickCnt >= 1000)) //&& (handle->mulCnt == 0))
+                {
+                    handle->fsm = KeyFsm_OnLong;
+                }
+            }
+            else
+            {
+                handle->fsm = KeyFsm_ShortAnti;
+                handle->antiTickCnt = 0;
+            }
+            break;
+        case KeyFsm_OnLong:
+            if (!triggered)
+            {
+                handle->fsm = KeyFsm_LongAnti;
+                handle->antiTickCnt = 0;
+                handle->longTickCnt = 0;
+            }
+            break;
+        case KeyFsm_ShortAnti:
+            if (triggered)
+                handle->fsm = KeyFsm_OnShort;
+            else
+            {
+                ++(handle->antiTickCnt);
+                if (handle->antiTickCnt >= _KeyAntiShakeTick)
+                {
+                    if (handle->mulCb)
+                    {
+                        handle->fsm = KeyFsm_mulWait;
+                        handle->antiTickCnt = 0;
+                        handle->longTickCnt = 0;
+                    }
+                    else
+                        handle->fsm = KeyFsm_evtShort;
+                }
+            }
+            break;
+        case KeyFsm_LongAnti:
+            if (triggered)
+                handle->fsm = KeyFsm_OnLong;
+            else
+            {
+                ++(handle->antiTickCnt);
+                if (handle->antiTickCnt >= _KeyAntiShakeTick)
+                    handle->fsm = KeyFsm_evtLong;
+            }
+            break;
+
+        case KeyFsm_mulWait:
+            if (triggered)
+            {
+                ++(handle->mulCnt);
+                handle->fsm = KeyFsm_mulAnti;
+                handle->antiTickCnt = 0;
+            }
+            else
+            {
+                ++(handle->antiTickCnt);
+                if (handle->antiTickCnt >= 50)
+                    handle->fsm = KeyFsm_evtShort;
+            }
+
+            break;
+        case KeyFsm_mulAnti:
+            if (triggered)
+            {
+                ++(handle->antiTickCnt);
+                if (handle->antiTickCnt >= _KeyAntiShakeTick)
+                    handle->fsm = KeyFsm_OnShort;
+            }
+            else
+            {
+                --(handle->mulCnt);
+                handle->antiTickCnt = 0;
+                handle->fsm = KeyFsm_mulWait;
+            }
+            break;
+        case KeyFsm_evtShort:
+            if ((handle->mulCnt) && (handle->mulCb))
+                handle->mulCb(handle->mulCnt, handle->arg);
+            else if (handle->cb)
+                handle->cb(KeyPressKind_Short, handle->arg);
+            handle->mulCnt = 0;
+            handle->fsm = KeyFsm_Idle;
+            break;
+
+        case KeyFsm_evtLong:
+            if (handle->cb)
+                handle->cb(KeyPressKind_Long, handle->arg);
+            handle->mulCnt = 0;
+            handle->fsm = KeyFsm_Idle;
+            break;
+
+        default:
+            break;
+        }
+    }
+}
+
+KeyDualEdge::KeyDualEdge(const char *pinName)
+{
+    __GPIO_PinName2PinData(pinName, this->gpio, this->pinNum);
+    modeConfig(this->gpio, this->pinNum, Mode_IPD);
+    // timestamp = sys::getTimeStamp();
+    this->crtEdge = 0;
+    this->gpio->BRR = (0x01 << (this->pinNum));
+    __KeyBaseInit(&(this->highTrig));
+    __KeyBaseInit(&(this->lowTrig));
+}
+
+void KeyDualEdge::setHighCbk(void *arg, void (*cbk)(uint8_t, void *), void (*mul)(uint8_t, void *))
+{
+    this->highTrig.cb = cbk;
+    this->highTrig.mulCb = mul;
+    this->highTrig.arg = arg;
+}
+
+void KeyDualEdge::setLowCbk(void *arg, void (*cbk)(uint8_t, void *), void (*mul)(uint8_t, void *))
+{
+    this->lowTrig.cb = cbk;
+    this->lowTrig.mulCb = mul;
+    this->lowTrig.arg = arg;
+}
+
+void KeyDualEdge::loopTick()
+{
+    // uint32_t currentTimeGap;
+    // currentTimeGap = sys::getTimeStamp() - timestamp;
+    // if (currentTimeGap >= 2)
+    // {
+    uint16_t pin = 0x01 << (this->pinNum);
+    uint8_t level;
+    // timestamp += currentTimeGap;
+    level = (this->gpio->IDR & pin) ? 1 : 0;
+    if (this->crtEdge)
+    {
+        __KeyBaseloopByMsTick(&(this->lowTrig), !level);
+        this->gpio->BRR = pin;
+        this->crtEdge = 0;
+    }
+    else
+    {
+        __KeyBaseloopByMsTick(&(this->highTrig), level);
+        this->gpio->BSRR = pin;
+        this->crtEdge = 1;
+    }
+    // }
+}
+
+Key::Key(const char *pinName, uint8_t activeLevel, void *arg, void (*cbk)(uint8_t, void *), void (*mul)(uint8_t, void *))
+{
+    __GPIO_PinName2PinData(pinName, this->gpio, this->pinNum);
+    this->activeLevel = (activeLevel ? 1 : 0);
+    if (this->activeLevel)
+        modeConfig(this->gpio, this->pinNum, Mode_IPD);
+    else
+        modeConfig(this->gpio, this->pinNum, Mode_IPU);
+
+    __KeyBaseInit(&(this->base));
+    this->base.cb = cbk;
+    this->base.arg = arg;
+    this->base.mulCb = mul;
+}
+
+bool Key::isActive()
+{
+    uint16_t pin = 0x01 << (this->pinNum);
+    uint8_t level;
+    level = ((this->gpio->IDR & pin) ? 1 : 0);
+    return (level == (this->activeLevel));
+}
+
+void Key::loopTick()
+{
+    uint16_t pin = 0x01 << (this->pinNum);
+    uint8_t level;
+    level = (this->gpio->IDR & pin) ? 1 : 0;
+    __KeyBaseloopByMsTick(&(this->base), (level == (this->activeLevel)));
+}
+
 extern "C"
 {
     void EXTI0_1_IRQHandler(void)
@@ -217,18 +455,35 @@ extern "C"
 
     void EXTI4_15_IRQHandler(void)
     {
-        __EXTIx_IRQHandler(4);
-        __EXTIx_IRQHandler(5);
-        __EXTIx_IRQHandler(6);
-        __EXTIx_IRQHandler(7);
-        __EXTIx_IRQHandler(8);
-        __EXTIx_IRQHandler(9);
-        __EXTIx_IRQHandler(10);
-        __EXTIx_IRQHandler(11);
-        __EXTIx_IRQHandler(12);
-        __EXTIx_IRQHandler(13);
-        __EXTIx_IRQHandler(14);
-        __EXTIx_IRQHandler(15);
+        uint32_t line = 0x01 << 3;
+        uint8_t x = 3;
+        while (x < 15)
+        {
+            line <<= 1;
+            ++x;
+            if (EXTI->PR & line)
+                if (EXTI->IMR & line)
+                {
+                    EXTI->PR = line;
+                    if (__GPIO_EXTI_Callbacks[x] != nullptr)
+                        __GPIO_EXTI_Callbacks[x]();
+                    else
+                        _GPIO_ExtiFlag |= (line);
+                }
+        }
+
+        // __EXTIx_IRQHandler(4);
+        // __EXTIx_IRQHandler(5);
+        // __EXTIx_IRQHandler(6);
+        // __EXTIx_IRQHandler(7);
+        // __EXTIx_IRQHandler(8);
+        // __EXTIx_IRQHandler(9);
+        // __EXTIx_IRQHandler(10);
+        // __EXTIx_IRQHandler(11);
+        // __EXTIx_IRQHandler(12);
+        // __EXTIx_IRQHandler(13);
+        // __EXTIx_IRQHandler(14);
+        // __EXTIx_IRQHandler(15);
     }
 }
 

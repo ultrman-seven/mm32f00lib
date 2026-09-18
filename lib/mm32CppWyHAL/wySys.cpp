@@ -259,6 +259,6 @@ extern "C"
         NVIC_SetPriority(SysTick_IRQn, 0);
 #ifdef _DBG_SWD_PROTECT_
         sys::delayMs(500);
-#endif _DBG_
+#endif
     }
 }
