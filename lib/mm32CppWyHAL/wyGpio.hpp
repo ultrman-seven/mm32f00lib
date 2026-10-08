@@ -47,9 +47,24 @@ namespace GPIO
 
     void afConfig(const char *pin, uint8_t af, Mode m);
     void modeConfig(const char *, Mode m, Speed s = Speed_50MHz);
-    void modeConfig(GPIO_TypeDef *, uint8_t p, Mode m, Speed s = Speed_50MHz);
+    void modeConfig(GPIO_TypeDef *, uint8_t p, Mode m, Speed s = Speed_50MHz, bool rcc = false);
     void extiConfig(const char *, void (*)(void), Mode = Mode_IPU);
     uint8_t afTable2afVal(char const *p, uint16_t const *table);
+
+#define _Gpio_BuildPin(_Port, _Pin) GPIO##_Port##_BASE, _Pin
+#define Gpio_BuildPin(...) _Gpio_BuildPin(__VA_ARGS__)
+
+    template <uint32_t base, uint8_t pin>
+    class templatePin
+    {
+    private:
+    public:
+        templatePin(Mode m = Mode_Out_PP, Speed s = Speed_50MHz) { modeConfig((GPIO_TypeDef *)base, pin, m, s, true); }
+        void set(void) { ((GPIO_TypeDef *)base)->BSRR = (0x01 << (pin)); }
+        void reset(void) { ((GPIO_TypeDef *)base)->BRR = (0x01 << (pin)); }
+        void operator=(bool s) { s ? this->set() : this->reset(); }
+        void flip(void) { this->operator=(!((((GPIO_TypeDef *)base)->ODR) & (0x01 << (pin)))); }
+    };
 
     class GpioPin
     {

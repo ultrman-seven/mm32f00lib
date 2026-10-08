@@ -221,6 +221,13 @@ uint8_t ChannelScan::isCompleted()
 
 namespace ADC
 {
+    // void AdcStartConvert() { ADC1->ADCR |= ADC_CR_ADST; }
+    void AdcStartConvertIt()
+    {
+        AdcStartConvert();
+        ADC1->CR |= 0x01;
+    }
+
     void adcGetAllChsVal(void)
     {
         uint8_t chNums;

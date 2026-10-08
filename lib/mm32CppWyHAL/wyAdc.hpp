@@ -34,6 +34,7 @@ namespace ADC
     };
 
     uint16_t getAdcVal(const char *pin);
+    // void AdcStartConvert();
     void adcGetAllChsVal(void);
 } // namespace ADC
 

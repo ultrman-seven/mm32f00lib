@@ -41,7 +41,7 @@ const uint8_t tbPresc[] = {0, 0, 0, 0, 1, 2, 3, 4, 1, 2, 3, 4, 6, 7, 8, 9};
 uint32_t __sysIrqMask;
 
 sys::taskMsPeriod::taskMsPeriod(uint16_t msTime, void (*cbk)(void))
-    : stamp(sys::getTimeStamp()), timeGap(msTime), triggered(false), callback(cbk)
+    : stamp(sys::getTimeStamp()), timeGap(msTime), callback(cbk) //, triggered(false)
 {
 }
 
@@ -55,15 +55,15 @@ void sys::taskMsPeriod::loop()
         stamp += currentTimeGap;
         if (nullptr != callback)
             callback();
-        else
-            triggered = true;
+        // else
+        //     triggered = true;
     }
 }
 
 void sys::taskMsPeriod::reset()
 {
     stamp = sys::getTimeStamp();
-    triggered = false;
+    // triggered = false;
 }
 
 sys::taskMsDelay::taskMsDelay()

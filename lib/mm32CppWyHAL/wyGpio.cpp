@@ -228,6 +228,7 @@ extern "C"
     }
 
 #define _KeyAntiShakeTick 2
+#define _KeyWaitMulTick 40
 
     // __attribute__((noinline))
     static void __KeyBaseloopByMsTick(__KeyBaseHandle_t *handle, uint8_t triggered)
@@ -261,6 +262,8 @@ extern "C"
                 if ((handle->longTickCnt >= 1000)) //&& (handle->mulCnt == 0))
                 {
                     handle->fsm = KeyFsm_OnLong;
+                    if (handle->cb)
+                        handle->cb(KeyPressKind_Long, handle->arg);
                 }
             }
             else
@@ -317,7 +320,7 @@ extern "C"
             else
             {
                 ++(handle->antiTickCnt);
-                if (handle->antiTickCnt >= 50)
+                if (handle->antiTickCnt >= _KeyWaitMulTick)
                     handle->fsm = KeyFsm_evtShort;
             }
 
@@ -346,8 +349,8 @@ extern "C"
             break;
 
         case KeyFsm_evtLong:
-            if (handle->cb)
-                handle->cb(KeyPressKind_Long, handle->arg);
+            // if (handle->cb)
+            //     handle->cb(KeyPressKind_Long, handle->arg);
             handle->mulCnt = 0;
             handle->fsm = KeyFsm_Idle;
             break;
@@ -496,10 +499,17 @@ namespace GPIO
         __GPIO_PinName2PinData(n, pt, pn);
         modeConfig(pt, pn, m, s);
     }
-    void modeConfig(GPIO_TypeDef *port, uint8_t pinNum, Mode m, Speed s)
+    void modeConfig(GPIO_TypeDef *port, uint8_t pinNum, Mode m, Speed s, bool rcc)
     {
         uint32_t mask1, mask2;
         uint8_t pn = pinNum;
+        if (rcc)
+        {
+            if (port == GPIOA)
+                __RCC_GPIO_ENR |= __GPIO_PORT_RCC_EN[0];
+            else
+                __RCC_GPIO_ENR |= __GPIO_PORT_RCC_EN[1];
+        }
         s = Speed_10MHz;
         if (pn >= 8)
             pn -= 8;

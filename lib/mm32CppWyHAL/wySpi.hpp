@@ -23,7 +23,7 @@ namespace SPI
         SPI_TypeDef *spi;
         void (*cbk)(void *);
         void *arg;
-        uint8_t *txBuf;
+        const uint8_t *txBuf;
         uint8_t *rxBuf;
         uint32_t txLen;
         uint32_t rxLen;
@@ -36,9 +36,9 @@ namespace SPI
                   uint16_t clkDiv = 8, uint8_t clockCfg = Spi_ClkCfg_Edge1High);
         // ~SpiObject();
         uint8_t readWrite(uint8_t);
-        void readWriteAsync(uint8_t *txBuf, uint8_t *rxBuf, uint32_t len, void (*cbk)(void *), void *arg);
+        void readWriteAsync(const uint8_t *txBuf, uint8_t *rxBuf, uint32_t len, void (*cbk)(void *), void *arg);
         void readAsync(uint8_t *buf, uint32_t len, void (*cbk)(void *), void *arg);
-        void writeAsync(uint8_t *buf, uint32_t len, void (*cbk)(void *), void *arg);
+        void writeAsync(const uint8_t *buf, uint32_t len, void (*cbk)(void *), void *arg);
     };
 
 } // namespace SPI

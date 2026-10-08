@@ -51,11 +51,36 @@ namespace sys
         void (*callback)(void);
 
     public:
-        bool triggered;
+        // bool triggered;
         taskMsPeriod(uint16_t msTime, void (*callback)(void) = nullptr);
         void loop();
         void reset();
         // ~timeTrigger();
+    };
+
+    // template <uint16_t timeGap, void (*callback)(void *), void *arg>
+    template <uint16_t timeGap, void (*callback)(void)>
+    class taskMsPeriod_tem
+    {
+    private:
+        uint32_t stamp;
+
+    public:
+        taskMsPeriod_tem() : stamp(sys::getTimeStamp()) {};
+        void loop()
+        {
+            uint32_t currentTimeGap;
+
+            currentTimeGap = sys::getTimeStamp() - stamp;
+            if (currentTimeGap > timeGap)
+            {
+                stamp += timeGap;
+                if (nullptr != callback)
+                    callback();
+                // callback(arg);
+            }
+        }
+        void reset() { stamp = sys::getTimeStamp(); }
     };
 
     class taskMsDelay

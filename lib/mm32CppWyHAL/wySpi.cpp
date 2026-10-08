@@ -1,5 +1,6 @@
 #include "wySpi.hpp"
-
+#include "reg_common.h"
+#include "core_cm0.h"
 using namespace SPI;
 
 #define SpiCrtState_TxEmpty 0x01
@@ -43,6 +44,7 @@ using namespace SPI;
 
 #define SpiComCtrl_RxEdgeTail 0x0010
 #define SpiComCtrl_TxNo1ClkDelay 0x0020
+// #define SpiComCtrl_TxNo1ClkDelay 0x00
 
 static SpiObject *_obj[1];
 
@@ -50,6 +52,9 @@ uint8_t SpiObject::readWrite(uint8_t dat)
 {
     uint32_t ret;
     // uint32_t sr;
+    this->spi->GCTL |= SpiGenCtrl_Enable;
+    this->spi->GCTL |= (SpiGenCtrl_RxEn | SpiGenCtrl_TxEn);
+
     spi->TDR = dat;
 
     while (!(spi->SR & 1))
@@ -60,7 +65,7 @@ uint8_t SpiObject::readWrite(uint8_t dat)
     return ret & 0x00ff;
 }
 
-void SpiObject::readWriteAsync(uint8_t *txBuf, uint8_t *rxBuf, uint32_t len, void (*cbk)(void *), void *arg)
+void SpiObject::readWriteAsync(const uint8_t *txBuf, uint8_t *rxBuf, uint32_t len, void (*cbk)(void *), void *arg)
 {
     this->cbk = cbk;
     this->arg = arg;
@@ -72,6 +77,8 @@ void SpiObject::readWriteAsync(uint8_t *txBuf, uint8_t *rxBuf, uint32_t len, voi
 
     this->spi->GCTL |= (SpiGenCtrl_RxEn | SpiGenCtrl_TxEn | SpiGenCtrl_IntEnable);
     this->spi->INTEN |= (SpiIntState_RxOk | SpiIntState_TxFifoEmpty);
+    // this->spi->INTEN &= ((uint32_t)(~(SpiIntState_TxCplt)));
+
     this->spi->GCTL |= SpiGenCtrl_Enable;
 }
 
@@ -92,7 +99,7 @@ void SpiObject::readAsync(uint8_t *buf, uint32_t len, void (*cbk)(void *), void 
     this->spi->GCTL |= SpiGenCtrl_Enable;
 }
 
-void SpiObject::writeAsync(uint8_t *buf, uint32_t len, void (*cbk)(void *), void *arg)
+void SpiObject::writeAsync(const uint8_t *buf, uint32_t len, void (*cbk)(void *), void *arg)
 {
     this->cbk = cbk;
     this->arg = arg;
@@ -106,13 +113,14 @@ void SpiObject::writeAsync(uint8_t *buf, uint32_t len, void (*cbk)(void *), void
     this->spi->GCTL |= (SpiGenCtrl_TxEn);
 
     this->spi->INTEN |= (SpiIntState_TxCplt | SpiIntState_TxFifoEmpty);
-    this->spi->GCTL |= SpiGenCtrl_Enable;
     this->spi->GCTL |= SpiGenCtrl_IntEnable;
+    this->spi->GCTL |= SpiGenCtrl_Enable;
 }
 
 #include "reg_rcc.h"
 SpiObject::SpiObject(uint8_t num, const char *sclk, const char *mosi, const char *miso, GPIO::Mode mosiMode, uint16_t clkDiv, uint8_t clkCfg)
 {
+    (void)num;
     // clock 4 spi
     RCC->APB1ENR |= RCC_APB1ENR_SPI1;
     spi = SPI1;
@@ -130,17 +138,21 @@ SpiObject::SpiObject(uint8_t num, const char *sclk, const char *mosi, const char
     }
     if (nullptr != miso)
     {
-        GPIO::afConfig(miso, 0, GPIO::Mode_IN_FLOATING);
+        // GPIO::afConfig(miso, 0, GPIO::Mode_IN_FLOATING);
+        GPIO::afConfig(miso, 0, GPIO::Mode_IPU);
     }
 
     spi->GCR &= (uint32_t)(~(SpiGenCtrl_DataWidth_32bit));
 
     spi->GCR |= SpiGenCtrl_ModeMaster;
 
-    spi->CCR |= (clkCfg);
+    spi->CCR |= ((clkCfg) | SpiComCtrl_RxEdgeTail);
     spi->BRR = clkDiv;
 
     spi->EXTCTL = 8;
+
+    NVIC_SetPriority(SPI1_IRQn, 1);
+    NVIC_EnableIRQ(SPI1_IRQn);
 }
 
 namespace SPI
@@ -149,18 +161,23 @@ namespace SPI
     {
         if ((handle->spi->INTSTAT) & SpiIntState_TxFifoEmpty)
         {
-            handle->spi->TDR = *(handle->txBuf);
-            --(handle->txLen);
-            if (0 == (handle->txLen))
+            if ((handle->spi->INTEN) & SpiIntState_TxFifoEmpty)
             {
-                handle->spi->INTEN &= ((uint32_t)(~(SpiIntState_TxFifoEmpty)));
+                handle->spi->TDR = *(handle->txBuf);
+                --(handle->txLen);
+                ++(handle->txBuf);
+                if (0 == (handle->txLen))
+                {
+                    handle->spi->INTEN &= ((uint32_t)(~(SpiIntState_TxFifoEmpty)));
+                }
             }
         }
 
         if ((handle->spi->INTSTAT) & SpiIntState_TxCplt)
         {
             (handle->spi->INTCLR) = SpiIntState_TxCplt;
-            if (0 == (handle->txLen))
+            if (0 == (handle->txLen) && ((handle->spi->INTEN) & SpiIntState_TxCplt))
+            // if (0 == (handle->txLen))
             {
                 handle->spi->INTEN &= ((uint32_t)(~(SpiIntState_TxCplt)));
                 handle->spi->GCTL &= ((uint32_t)(~(SpiGenCtrl_Enable | SpiGenCtrl_RxEn | SpiGenCtrl_TxEn | SpiGenCtrl_IntEnable)));
@@ -172,16 +189,21 @@ namespace SPI
         if ((handle->spi->INTSTAT) & SpiIntState_RxOk)
         {
             (handle->spi->INTCLR) = SpiIntState_RxOk;
-            *(handle->rxBuf) = (handle->spi->RDR);
-            --(handle->rxLen);
-            ++(handle->rxBuf);
-            if (0 == (handle->rxLen))
-            {
-                handle->spi->GCTL &= ((uint32_t)(~(SpiGenCtrl_Enable | SpiGenCtrl_RxEn | SpiGenCtrl_IntEnable)));
-                handle->spi->INTEN &= ((uint32_t)(~(SpiIntState_RxOk)));
 
-                if (handle->cbk)
-                    handle->cbk(handle->arg);
+            if ((handle->spi->INTEN) & SpiIntState_RxOk)
+            {
+                *(handle->rxBuf) = (handle->spi->RDR);
+                // *(handle->rxBuf) = 0xab;
+                --(handle->rxLen);
+                ++(handle->rxBuf);
+                if (!(handle->rxLen))
+                {
+                    handle->spi->GCTL &= ((uint32_t)(~(SpiGenCtrl_Enable | SpiGenCtrl_RxEn | SpiGenCtrl_IntEnable)));
+                    handle->spi->INTEN &= ((uint32_t)(~(SpiIntState_RxOk)));
+
+                    if (handle->cbk)
+                        handle->cbk(handle->arg);
+                }
             }
         }
     }
