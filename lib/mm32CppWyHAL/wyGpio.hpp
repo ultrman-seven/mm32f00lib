@@ -63,6 +63,8 @@ namespace GPIO
         void set(void) { ((GPIO_TypeDef *)base)->BSRR = (0x01 << (pin)); }
         void reset(void) { ((GPIO_TypeDef *)base)->BRR = (0x01 << (pin)); }
         void operator=(bool s) { s ? this->set() : this->reset(); }
+        bool read(void) { return (((GPIO_TypeDef *)base)->IDR & (0x01 << (pin))) ? true : false; }
+        // bool read(void) { return (((GPIO_TypeDef *)base)->IDR & (0x01 << (pin))); }
         void flip(void) { this->operator=(!((((GPIO_TypeDef *)base)->ODR) & (0x01 << (pin)))); }
     };
 
