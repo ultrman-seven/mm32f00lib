@@ -1,0 +1,74 @@
+cmake_minimum_required(VERSION 3.20)
+
+set(CMAKE_C_STANDARD 11)
+set(CMAKE_C_STANDARD_REQUIRED ON)
+set(CMAKE_C_EXTENSIONS ON)
+
+# Define the build type
+if(NOT CMAKE_BUILD_TYPE)
+    set(CMAKE_BUILD_TYPE "Release")
+endif()
+
+# Set the project name
+set(CMAKE_PROJECT_NAME rcv433)
+set(exeName_rmt remote433)
+set(exeName_rcv receive433)
+
+# Include toolchain file
+include("mm32f00lib/cmake/mm32f0.cmake")
+
+# Enable compile command to ease indexing with e.g. clangd
+set(CMAKE_EXPORT_COMPILE_COMMANDS TRUE)
+
+# Core project settings
+project(${CMAKE_PROJECT_NAME})
+# Enable CMake support for ASM and C languages
+enable_language(C CXX ASM)
+
+message("Build type: " ${CMAKE_BUILD_TYPE})
+
+# Create an executable object type
+add_executable(${exeName_rmt})
+add_executable(${exeName_rcv})
+
+# Add STM32CubeMX generated sources
+add_subdirectory(mm32f00lib)
+add_subdirectory(userCode)
+
+# Link directories setup
+target_link_directories(${exeName_rmt} PRIVATE
+    # Add user defined library search paths
+)
+
+# Add sources to executable
+target_sources(${exeName_rmt} PRIVATE
+    # Add user sources here
+)
+
+# Add include paths
+target_include_directories(${exeName_rmt} PRIVATE
+    # Add user defined include paths
+)
+
+# Add project symbols (macros)
+target_compile_definitions(${exeName_rmt} PRIVATE
+    # Add user defined symbols
+    _DBG_SWD_PROTECT_
+)
+
+mmCfg(${exeName_rmt})
+mmCfg(${exeName_rcv})
+
+# Add linked libraries
+target_link_libraries(${exeName_rmt}
+    mm32
+    UserCode_remote
+    # Add user defined libraries
+)
+
+# Add linked libraries
+target_link_libraries(${exeName_rcv}
+    mm32
+    UserCode_receive
+    # Add user defined libraries
+)

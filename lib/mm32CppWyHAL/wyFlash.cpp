@@ -64,7 +64,7 @@ void __FlashEraseSector_NoWait(uint32_t address)
     FLASH->CR |= FLASH_CR_STRT;
 }
 
-uint8_t FlashWaitForLastOperation(uint32_t time_out = 0xff)
+uint8_t __attribute__((noinline)) FlashWaitForLastOperation(uint32_t time_out = 0xff)
 {
     volatile uint32_t i;
     uint8_t ret;
@@ -85,7 +85,7 @@ uint8_t FlashWaitForLastOperation(uint32_t time_out = 0xff)
     return ((time_out == 0x00) ? FLASH_TIMEOUT : ret);
 }
 
-uint8_t FlashProgramHalfWord(uint32_t address, uint16_t data)
+uint8_t __attribute__((noinline)) FlashProgramHalfWord(uint32_t address, uint16_t data)
 {
     FLASH_ClearFlag(FLASH_FLAG_BSY | FLASH_SR_PGERR | FLASH_SR_WRPRTERR | FLASH_FLAG_EOP);
     FLASH->CR |= FLASH_CR_PG;

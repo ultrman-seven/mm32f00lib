@@ -22,9 +22,8 @@ set(CMAKE_EXECUTABLE_SUFFIX_C       ".elf")
 set(CMAKE_EXECUTABLE_SUFFIX_CXX     ".elf")
 
 set(CMAKE_TRY_COMPILE_TARGET_TYPE STATIC_LIBRARY)
-
 # MCU specific flags
-set(TARGET_FLAGS "-mcpu=cortex-m0 ")
+set(TARGET_FLAGS "-mcpu=cortex-m0")
 
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${TARGET_FLAGS}")
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -Wextra -Wpedantic -fdata-sections -ffunction-sections")
@@ -44,7 +43,22 @@ set(CMAKE_C_LINK_FLAGS "${CMAKE_C_LINK_FLAGS} -T \"${CMAKE_CURRENT_LIST_DIR}/../
 message(${CMAKE_C_LINK_FLAGS})
 
 set(CMAKE_C_LINK_FLAGS "${CMAKE_C_LINK_FLAGS} --specs=nano.specs")
-set(CMAKE_C_LINK_FLAGS "${CMAKE_C_LINK_FLAGS} -Wl,-Map=${CMAKE_PROJECT_NAME}.map -Wl,--gc-sections")
+function(mmCfg exeName)
+# MCU specific flags
+# target_compile_options(${exeName} PRIVATE "-mcpu=cortex-m0")
+target_link_options(${exeName} PRIVATE
+    "-Wl,-Map=${exeName}.map"
+    "-Wl,--gc-sections"
+    )
+set_target_properties(${exeName} PROPERTIES ADDITIONAL_CLEAN_FILES ${exeName}.map)
+add_custom_command(
+    TARGET ${exeName} POST_BUILD
+    COMMAND ${CMAKE_OBJCOPY} -O ihex
+    ${CMAKE_BINARY_DIR}/${exeName}.elf ${CMAKE_BINARY_DIR}/${exeName}.hex
+)
+endfunction()
+
+# set(CMAKE_C_LINK_FLAGS "${CMAKE_C_LINK_FLAGS} -Wl,-Map=${CMAKE_PROJECT_NAME}.map -Wl,--gc-sections")
 set(CMAKE_C_LINK_FLAGS "${CMAKE_C_LINK_FLAGS} -Wl,--start-group -lc -lm -Wl,--end-group")
 set(CMAKE_C_LINK_FLAGS "${CMAKE_C_LINK_FLAGS} -Wl,--print-memory-usage")
 
