@@ -48,35 +48,52 @@ using namespace SPI;
 
 static SpiObject *_obj[1];
 
-uint8_t SpiObject::readWrite(uint8_t dat)
+void SpiObject::readWriteBlock(const uint8_t *tx, uint8_t *rx, uint16_t len)
 {
     uint32_t ret;
     // uint32_t sr;
-    this->spi->GCTL |= SpiGenCtrl_Enable;
     this->spi->GCTL |= (SpiGenCtrl_RxEn | SpiGenCtrl_TxEn);
+    this->spi->GCTL |= SpiGenCtrl_Enable;
 
-    spi->TDR = dat;
+    while (len--)
+    {
+        spi->TDR = *tx;
 
-    while (!(spi->SR & 1))
-        ;
-    while (!(spi->SR & 2))
-        ;
-    ret = spi->RDR;
-    return ret & 0x00ff;
+        while (!(spi->SR & 1))
+            ;
+        while (!(spi->SR & 2))
+            ;
+        ret = spi->RDR;
+        *rx = ret;
+
+        tx++;
+        rx++;
+    }
+    spi->GCTL &= ((uint32_t)(~(SpiGenCtrl_Enable | SpiGenCtrl_RxEn | SpiGenCtrl_TxEn | SpiGenCtrl_IntEnable)));
 }
 
-void SpiObject::readWriteAsync(const uint8_t *txBuf, uint8_t *rxBuf, uint32_t len, void (*cbk)(void *), void *arg)
+void SpiObject::readWriteAsync(const uint8_t *txBuf, uint8_t tlen, uint8_t *rxBuf, uint32_t rlen, void (*cbk)(void *), void *arg)
 {
     this->cbk = cbk;
     this->arg = arg;
 
     this->txBuf = txBuf;
     this->rxBuf = rxBuf;
-    this->txLen = len;
-    this->rxLen = len;
+    this->txLen = tlen;
+    this->rxLen = rlen;
 
-    this->spi->GCTL |= (SpiGenCtrl_RxEn | SpiGenCtrl_TxEn | SpiGenCtrl_IntEnable);
-    this->spi->INTEN |= (SpiIntState_RxOk | SpiIntState_TxFifoEmpty);
+    this->spi->GCTL |= (SpiGenCtrl_IntEnable);
+    if (tlen)
+    {
+        this->spi->GCTL |= SpiGenCtrl_TxEn;
+        this->spi->INTEN |= (SpiIntState_TxFifoEmpty);
+    }
+    if (rlen)
+    {
+        this->spi->GCTL |= SpiGenCtrl_RxEn;
+        this->spi->INTEN |= (SpiIntState_RxOk);
+    }
+
     // this->spi->INTEN &= ((uint32_t)(~(SpiIntState_TxCplt)));
 
     this->spi->GCTL |= SpiGenCtrl_Enable;
@@ -94,7 +111,7 @@ void SpiObject::readAsync(uint8_t *buf, uint32_t len, void (*cbk)(void *), void 
 
     this->spi->GCTL &= ((uint32_t)(~(SpiGenCtrl_TxEn)));
     this->spi->GCTL |= (SpiGenCtrl_RxEn | SpiGenCtrl_IntEnable);
-    this->spi->RXDNR = 1;
+    this->spi->RXDNR = (rxLen & 0xffff);
     this->spi->INTEN |= SpiIntState_RxOk;
     this->spi->GCTL |= SpiGenCtrl_Enable;
 }
@@ -147,6 +164,7 @@ SpiObject::SpiObject(uint8_t num, const char *sclk, const char *mosi, const char
     spi->GCR |= SpiGenCtrl_ModeMaster;
 
     spi->CCR |= ((clkCfg) | SpiComCtrl_RxEdgeTail);
+    // spi->CCR |= ((clkCfg));
     spi->BRR = clkDiv;
 
     spi->EXTCTL = 8;
@@ -183,15 +201,21 @@ namespace SPI
                 handle->spi->GCTL &= ((uint32_t)(~(SpiGenCtrl_Enable | SpiGenCtrl_RxEn | SpiGenCtrl_TxEn | SpiGenCtrl_IntEnable)));
                 if (handle->cbk)
                     handle->cbk(handle->arg);
+                // handle->spi->GCTL &= ((uint32_t)(~(SpiGenCtrl_TxEn)));
+                // if (0 == (handle->rxLen))
+                // {
+                //     handle->spi->GCTL &= ((uint32_t)(~(SpiGenCtrl_Enable | SpiGenCtrl_RxEn | SpiGenCtrl_IntEnable)));
+                //     if (handle->cbk)
+                //         handle->cbk(handle->arg);
+                // }
             }
         }
 
         if ((handle->spi->INTSTAT) & SpiIntState_RxOk)
         {
-            (handle->spi->INTCLR) = SpiIntState_RxOk;
-
             if ((handle->spi->INTEN) & SpiIntState_RxOk)
             {
+            _rd_fifo:
                 *(handle->rxBuf) = (handle->spi->RDR);
                 // *(handle->rxBuf) = 0xab;
                 --(handle->rxLen);
@@ -203,8 +227,22 @@ namespace SPI
 
                     if (handle->cbk)
                         handle->cbk(handle->arg);
+                    // handle->spi->GCTL &= ((uint32_t)(~(SpiGenCtrl_RxEn)));
+                    // if (0 == handle->txLen)
+                    // {
+                    //     handle->spi->GCTL &= ((uint32_t)(~(SpiGenCtrl_Enable | SpiGenCtrl_TxEn | SpiGenCtrl_IntEnable)));
+
+                    //     if (handle->cbk)
+                    //         handle->cbk(handle->arg);
+                    // }
+                }
+                else
+                {
+                    if ((handle->spi->SR) & SpiCrtState_Rx)
+                        goto _rd_fifo;
                 }
             }
+            (handle->spi->INTCLR) = SpiIntState_RxOk;
         }
     }
 } // namespace SPI

@@ -281,9 +281,12 @@ void Serial::setInterrupt(void (*f)(uint8_t))
 
 extern "C"
 {
+// TODO: Async style
+
+#if 0
     void UART1_IRQHandler(void) { __UARTx_IRQHandler(1); }
     void UART2_IRQHandler(void) { __UARTx_IRQHandler(2); }
-#if __UART_TotalNum > 3
+// #if __UART_TotalNum > 3
     void UART3_4_IRQHandler(void)
     {
         __UARTx_IRQHandler(4);

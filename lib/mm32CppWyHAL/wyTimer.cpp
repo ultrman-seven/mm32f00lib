@@ -19,12 +19,14 @@ void (*timerUpdateCallbacks[5])(void);
 
 extern "C"
 {
-    void TIM1_BRK_UP_TRG_COM_IRQHandler()
-    {
-        __TIM_Update_IRQ_Fun(1, 0);
-    }
-    void TIM3_IRQHandler() { __TIM_Update_IRQ_Fun(3, 1); }
-    void TIM14_IRQHandler() { __TIM_Update_IRQ_Fun(14, 2); }
+    // TODO
+
+    // void TIM1_BRK_UP_TRG_COM_IRQHandler()
+    // {
+    //     __TIM_Update_IRQ_Fun(1, 0);
+    // }
+    // void TIM3_IRQHandler() { __TIM_Update_IRQ_Fun(3, 1); }
+    // void TIM14_IRQHandler() { __TIM_Update_IRQ_Fun(14, 2); }
 }
 
 void Timer::work(bool s)

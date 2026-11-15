@@ -35,8 +35,9 @@ namespace SPI
                   GPIO::Mode mosiMode = GPIO::Mode_AF_PP,
                   uint16_t clkDiv = 8, uint8_t clockCfg = Spi_ClkCfg_Edge1High);
         // ~SpiObject();
-        uint8_t readWrite(uint8_t);
-        void readWriteAsync(const uint8_t *txBuf, uint8_t *rxBuf, uint32_t len, void (*cbk)(void *), void *arg);
+        // uint8_t readWrite(uint8_t);
+        void readWriteBlock(const uint8_t *tx, uint8_t *rx, uint16_t len);
+        void readWriteAsync(const uint8_t *txBuf, uint8_t txLen, uint8_t *rxBuf, uint32_t rxLen, void (*cbk)(void *), void *arg);
         void readAsync(uint8_t *buf, uint32_t len, void (*cbk)(void *), void *arg);
         void writeAsync(const uint8_t *buf, uint32_t len, void (*cbk)(void *), void *arg);
     };

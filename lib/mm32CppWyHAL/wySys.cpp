@@ -1,12 +1,12 @@
 #include "stdint.h"
-#include "list"
+// #include "list"
 #include "reg_common.h"
 #include "core_cm0.h"
 #include "reg_rcc.h"
 #include "wySys.hpp"
 #include "cppHalReg.hpp"
 
-std::list<void (*)(void)> __mainLoopFuncs;
+// std::list<void (*)(void)> __mainLoopFuncs;
 uint32_t __sysMsTimeStamp;
 volatile uint32_t __sysDelayCnt;
 
@@ -171,21 +171,21 @@ namespace sys
         *t = __sysMsTimeStamp;
         return __sysMsTimeStamp;
     }
-    void throwFunc2Loop(void (*f)(void))
-    {
-        __mainLoopFuncs.push_back(f);
-    }
-    void runLoopFunctions(void)
-    {
-        for (auto i : __mainLoopFuncs)
-            if (i != nullptr)
-                i();
-    }
-    void deleteLoop(void (*f)(void))
-    {
-        __sysFoo = f;
-        __mainLoopFuncs.remove_if(__funcListRmvIf);
-    }
+    // void throwFunc2Loop(void (*f)(void))
+    // {
+    //     __mainLoopFuncs.push_back(f);
+    // }
+    // void runLoopFunctions(void)
+    // {
+    //     for (auto i : __mainLoopFuncs)
+    //         if (i != nullptr)
+    //             i();
+    // }
+    // void deleteLoop(void (*f)(void))
+    // {
+    //     __sysFoo = f;
+    //     __mainLoopFuncs.remove_if(__funcListRmvIf);
+    // }
     void delayMs(uint32_t ms)
     {
         // if(ms == 1)

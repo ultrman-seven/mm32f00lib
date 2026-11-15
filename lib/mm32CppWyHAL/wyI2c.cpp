@@ -68,15 +68,17 @@ IIC_HardwareMasterObject::IIC_HardwareMasterObject(uint8_t channel, const char *
         this->i2c->SSLR = clkLowCnt;
     }
     i2c->IC_INTR_MASK &= 0xc000;
+    // i2c->IC_INTR_MASK = 0;
     i2c->IC_RX_TL = 0x00;
     // i2c->IC_TX_TL = 1;
     i2c->IC_TX_TL = 0;
     // this->i2c->IC_INTR_MASK = 0;
     // i2c->IC_INTR_MASK |= (I2cIt_StartDet | I2cIt_StopDet);
-    i2c->IC_INTR_MASK |= (I2cIt_StopDet);
+    // i2c->DR &= (uint16_t)(~(0x200));
 
     NVIC_SetPriority(I2C1_IRQn, 2);
     NVIC_EnableIRQ(I2C1_IRQn);
+    i2c->IC_INTR_MASK |= (I2cIt_StopDet);
 }
 
 uint8_t IIC_HardwareMasterObject::sendAsync(uint8_t add, uint8_t *datPtr, uint32_t len, uint8_t needStop, void (*cbk)(void *), void *arg)
@@ -113,9 +115,11 @@ void IIC::_irqHandle(IIC_HardwareMasterObject *handle)
             if ((handle->needStop) && (1 == handle->txLen))
             {
                 handle->i2c->CR |= I2cRegCr_StopEn;
+                // handle->i2c->DR |= 0x200;
             }
             --(handle->txLen);
             handle->i2c->DR = tx;
+            // *((uint8_t*)(&(handle->i2c->DR))) = tx;
         }
         else
         {
@@ -137,6 +141,7 @@ void IIC::_irqHandle(IIC_HardwareMasterObject *handle)
         handle->i2c->CR &= (uint16_t)(~(I2cRegCr_StopEn));
 
         handle->i2c->ENR &= 0xfffe;
+        // handle->i2c->DR &= (uint16_t)(~(0x200));
         if (handle->cbk)
             handle->cbk(handle->arg);
     }

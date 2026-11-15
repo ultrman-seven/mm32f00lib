@@ -28,9 +28,9 @@ namespace sys
         _MCU_BUS_APB2
     };
 
-    void deleteLoop(void (*f)(void));
-    void runLoopFunctions(void);
-    void throwFunc2Loop(void (*)(void));
+    // void deleteLoop(void (*f)(void));
+    // void runLoopFunctions(void);
+    // void throwFunc2Loop(void (*)(void));
     void delayMs(uint32_t ms);
     void delayUs(uint32_t us);
     uint32_t getTimeStamp(unsigned long *t);
